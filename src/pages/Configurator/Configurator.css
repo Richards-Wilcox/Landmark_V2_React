@@ -1291,6 +1291,91 @@
 }
 
 /* ==========================================
+   Canvas zoom
+========================================== */
+
+.door-canvas-viewport {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    touch-action: none;
+}
+
+.door-canvas-viewport.zoomed {
+    cursor: grab;
+}
+
+.door-canvas-viewport.zoomed:active {
+    cursor: grabbing;
+}
+
+.door-canvas-wrapper {
+    transform-origin: center center;
+    transition: transform 0.15s ease;
+}
+
+.door-canvas-viewport.zoomed .door-canvas-wrapper {
+    transition: none;
+}
+
+.canvas-zoom-controls {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    z-index: 40;
+
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    padding: 4px;
+    background: #ffffff;
+    border: 1px solid #D9D9D9;
+    border-radius: 999px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.canvas-zoom-controls button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 30px;
+    height: 30px;
+    padding: 0;
+
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+
+    color: #333333;
+    cursor: pointer;
+}
+
+.canvas-zoom-controls button svg {
+    font-size: 18px;
+}
+
+.canvas-zoom-controls button:hover:not(:disabled) {
+    background: #E4E4E4;
+}
+
+.canvas-zoom-controls button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.canvas-zoom-value {
+    min-width: 42px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #333333;
+}
+
+/* ==========================================
    Configure menu (original .slim-options-container)
 ========================================== */
 
