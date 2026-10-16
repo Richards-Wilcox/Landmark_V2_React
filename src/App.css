@@ -1,38 +1,70 @@
-.App {
-  text-align: center;
+
+html,
+body {
+    margin: 0;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+#landmark-app,
+#landmark-app * {
+
+    font-family: Karla, Arial, sans-serif !important;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+
+.react-root {
+
+    width: 100%;
+
+    margin: 0;
+
+    padding: 0;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+.screen-exit {
+
+    opacity: 0;
+
+    transform: scale(.95);
+
+    transition:
+        opacity .25s ease,
+        transform .25s ease;
 }
 
-.App-link {
-  color: #61dafb;
+.configurator-enter {
+
+    animation:
+        configuratorFadeIn
+        .25s ease forwards;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.configuration-info, .bottom-buttons, .top-buttons, #header-user-icon {
+    display: none;
+}
+
+
+#collapse906473341{
+  display:none;
+}
+
+/* #displayMain{
+	padding: 0 20px !important;
+} */
+
+@keyframes configuratorFadeIn {
+
+    from {
+
+        opacity: 0;
+
+        transform: scale(.98);
+    }
+
+    to {
+
+        opacity: 1;
+
+        transform: scale(1);
+    }
+
 }

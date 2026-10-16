@@ -1,25 +1,69 @@
-import logo from './logo.svg';
-import './App.css';
+import { useState } from "react";
+
+import ProductSelectionScreen from "./components/ProductSelection/ProductSelectionScreen";
+import Configurator from "./pages/Configurator/Configurator";
+
+import "./App.css";
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+
+    const [selectedProduct, setSelectedProduct] =
+        useState(null);
+
+    const [screenExit, setScreenExit] =
+        useState(false);
+
+    const handleProductSelect = (product) => {
+
+        setScreenExit(true);
+
+        setTimeout(() => {
+
+            setSelectedProduct(product);
+
+        }, 250);
+
+    };
+
+    return (
+        <>
+            {!selectedProduct && (
+
+                <div
+                    className={
+                        screenExit
+                            ? "screen-exit"
+                            : ""
+                    }
+                >
+
+                    <ProductSelectionScreen
+                        onSelectProduct={
+                            handleProductSelect
+                        }
+                    />
+
+                </div>
+
+            )}
+
+            {selectedProduct && (
+
+                <div
+                    className="configurator-enter"
+                >
+
+                    <Configurator
+                        product={selectedProduct}
+                    />
+
+                </div>
+
+            )}
+
+        </>
+    );
+
 }
 
 export default App;

@@ -1,17 +1,60 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+import React from "react";
+import ReactDOM from "react-dom/client";
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+import "bootstrap/dist/css/bootstrap.min.css";
+
+import App from "./App";
+import reportWebVitals from "./reportWebVitals";
+
+let mountNode = document.getElementById("root");
+
+if (!mountNode) {
+
+    mountNode =
+        document.getElementById("react-root");
+
+    if (!mountNode) {
+
+        mountNode =
+            document.createElement("div");
+
+        mountNode.id = "react-root";
+
+        mountNode.className =
+            "react-root landmark-app";
+
+        const configureOneContainer =
+            document.querySelector(
+                ".concept-ui-form.scrollable"
+            );
+
+        if (configureOneContainer) {
+
+            configureOneContainer.appendChild(
+                mountNode
+            );
+
+        } else {
+
+            document.body.appendChild(
+                mountNode
+            );
+
+        }
+
+    }
+
+}
+
+const root =
+    ReactDOM.createRoot(
+        mountNode
+    );
+
 root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+    <React.StrictMode>
+        <App />
+    </React.StrictMode>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();
