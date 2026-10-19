@@ -21,6 +21,23 @@ import {
     getEnabledWindows
 } from "../../components/Canvas/canvasWindowLayout";
 
+import {
+    availableColors,
+    optionalColors,
+    silverColor
+} from "../../Data/colors";
+
+import { useEwSync } from "../../ew/ewSync";
+import { getGlazingCodeValues } from "../../ew/glazingCodes";
+import { usePricebook, getPriceValues } from "../../ew/priceController";
+import { runConfigure } from "../../ew/configureController";
+
+import {
+    DOOR_MODEL_ATTRS,
+    FACE_DESC,
+    DESIGN_PATTERNS
+} from "../../ew/ewAttributes";
+
 import { IoIosArrowForward, IoIosArrowBack } from "react-icons/io";
 
 import {
@@ -30,214 +47,124 @@ import {
 
 import "./Configurator.css";
 
-// End caps input is not built yet – original default is single
+// End caps / Raynor inputs are not built yet – original defaults
 const SINGLE_ENDCAP = true;
+const END_CAPS = "N";
+const RAYNOR_DOOR = "N";
+
+const ALL_COLORS = [
+    ...availableColors,
+    ...optionalColors,
+    silverColor
+];
+
+const SIZE_MAP = {
+    "0": { width: 8, height: 7 },
+    "1": { width: 9, height: 7 },
+    "2": { width: 16, height: 7 },
+    "3": { width: 8, height: 8 },
+    "4": { width: 9, height: 8 },
+    "5": { width: 16, height: 8 }
+};
+
+const TABS = [
+    "dimensions",
+    "glazing",
+    "hardware",
+    "operator",
+    "advanced",
+    "annotations"
+];
 
 function Configurator() {
 
-    const [activeTab, setActiveTab] =
-        useState("dimensions");
+    const [activeTab, setActiveTab] = useState("dimensions");
 
-    const [doorModel, setDoorModel] =
-        useState("A");
+    /* ---------- Door ---------- */
 
-    const [doorSize, setDoorSize] =
-        useState("2");
+    const [doorModel, setDoorModel] = useState("A");
+    const [doorSize, setDoorSize] = useState("2");
+    const [customDimension, setCustomDimension] = useState(false);
+    const [panelStyle, setPanelStyle] = useState("F");
+    const [morePanelStyle, setMorePanelStyle] = useState(false);
+    const [selectedColor, setSelectedColor] = useState("W");
+    const [finish, setFinish] = useState("W");
+    const [designCode, setDesignCode] = useState("");
 
-    const [customDimension, setCustomDimension] =
-        useState(false);
+    const [doorWidthFeet, setDoorWidthFeet] = useState("16");
+    const [doorWidthInches, setDoorWidthInches] = useState("0");
+    const [doorHeightFeet, setDoorHeightFeet] = useState("7");
+    const [doorHeightInches, setDoorHeightInches] = useState("0");
 
-    const [panelStyle, setPanelStyle] =
-        useState("F");
+    const [numOfSections, setNumOfSections] = useState("4");
+    const [numOfPanels, setNumOfPanels] = useState("");
+    const [numOfWindows, setNumOfWindows] = useState("");
 
-    const [morePanelStyle, setMorePanelStyle] =
-        useState(false);
-
-    const [selectedColor, setSelectedColor] =
-        useState("W");
-
-    const [finish, setFinish] =
-        useState("W");
-
-    const [designCode, setDesignCode] =
-        useState("");
-
-    const [doorWidthFeet, setDoorWidthFeet] =
-        useState("16");
-
-    const [doorWidthInches, setDoorWidthInches] =
-        useState("0");
-
-    const [doorHeightFeet, setDoorHeightFeet] =
-        useState("7");
-
-    const [doorHeightInches, setDoorHeightInches] =
-        useState("0");
-
-    const [numOfSections, setNumOfSections] =
-        useState("4");
-
-    const [numOfPanels, setNumOfPanels] =
-        useState("");
-
-    const [showPopularColors,
-        setShowPopularColors] =
-        useState(true);
-
-    const [frameColor, setFrameColor] =
-        useState("W");
-
-    const [insertColor, setInsertColor] =
-        useState("W");
+    const [showPopularColors, setShowPopularColors] = useState(true);
 
     /* ---------- Glazing ---------- */
 
-    const [glassShape, setGlassShape] =
-        useState("");
+    const [frameColor, setFrameColor] = useState("W");
+    const [insertColor, setInsertColor] = useState("W");
 
-    const [glassInsert, setGlassInsert] =
-        useState("");
+    const [glassShape, setGlassShape] = useState("");
+    const [glassType, setGlassType] = useState("");
+    const [glassInsert, setGlassInsert] = useState("");
+    const [temperedGlass, setTemperedGlass] = useState("");
 
-    const [temperedGlass, setTemperedGlass] =
-        useState("");
+    const [windowPosition, setWindowPosition] = useState("top");
+    const [lastWindowPosition, setLastWindowPosition] = useState("top");
+    const [customWindows, setCustomWindows] = useState([]);
+    const [slimSections, setSlimSections] = useState([]);
+    const [selectedSlimSection, setSelectedSlimSection] = useState(null);
 
-    const [windowPosition, setWindowPosition] =
-        useState("top");
+    /* ---------- Configure ---------- */
 
-    // Last non-custom position (used to seed slim custom mode)
-    const [lastWindowPosition, setLastWindowPosition] =
-        useState("top");
+    const [configuring, setConfiguring] = useState(false);
 
-    // Enabled windows per section in custom mode
-    const [customWindows, setCustomWindows] =
-        useState([]);
+    const pricebook = usePricebook();
 
-    // Slim per-section config: { shape, slimOne, spacing }
-    const [slimSections, setSlimSections] =
-        useState([]);
+    /* ---------- Derived ---------- */
 
-    // Section whose pencil menu is open
-    const [selectedSlimSection, setSelectedSlimSection] =
-        useState(null);
+    const selectedSize = SIZE_MAP[doorSize];
 
-    const sizeMap = {
+    const width = customDimension
+        ? Number(doorWidthFeet) * 12 + Number(doorWidthInches)
+        : selectedSize.width * 12;
 
-        "0": {
-            width: 8,
-            height: 7
-        },
+    const height = customDimension
+        ? Number(doorHeightFeet) * 12 + Number(doorHeightInches)
+        : selectedSize.height * 12;
 
-        "1": {
-            width: 9,
-            height: 7
-        },
+    const sectionCount = Number(numOfSections) || 4;
 
-        "2": {
-            width: 16,
-            height: 7
-        },
-
-        "3": {
-            width: 8,
-            height: 8
-        },
-
-        "4": {
-            width: 9,
-            height: 8
-        },
-
-        "5": {
-            width: 16,
-            height: 8
-        }
-
-    };
-
-    const selectedSize =
-        sizeMap[doorSize];
-
-    const width =
-        customDimension
-            ? (
-                Number(doorWidthFeet) * 12 +
-                Number(doorWidthInches)
-            )
-            : (
-                selectedSize.width * 12
-            );
-
-    const height =
-        customDimension
-            ? (
-                Number(doorHeightFeet) * 12 +
-                Number(doorHeightInches)
-            )
-            : (
-                selectedSize.height * 12
-            );
-
-    const sectionCount =
-        Number(numOfSections) || 4;
-
-    const isSlimGlass =
-        (glassShape || "").includes("slim");
-
-    const tabs = [
-        "dimensions",
-        "glazing",
-        "hardware",
-        "operator",
-        "advanced",
-        "annotations"
-    ];
+    const isSlimGlass = (glassShape || "").includes("slim");
 
     /* ==========================================
        EFFECTS
     ========================================== */
 
-    //Set frame color selection same as door color
+    // Frame colour follows door colour (L138 slim -> Black)
     useEffect(() => {
 
         const isSlimA =
-
             doorModel === "A" &&
+            (glassShape === "slim_single" || glassShape === "slim_double");
 
-            (
-                glassShape === "slim_single" ||
-                glassShape === "slim_double"
-            );
+        setFrameColor(isSlimA ? "K" : selectedColor);
 
-        if (isSlimA) {
+    }, [selectedColor, doorModel, glassShape]);
 
-            setFrameColor("K");
-
-            return;
-
-        }
-
-        setFrameColor(selectedColor);
-
-    }, [
-        selectedColor,
-        doorModel,
-        glassShape
-    ]);
-
-    //Set insert color selection same as door color
+    // Insert colour follows door colour
     useEffect(() => {
-
         setInsertColor(selectedColor);
-
     }, [selectedColor]);
 
     // New glass shape: reset positions (slim -> Left, others -> Top)
     useEffect(() => {
 
         const defaultPosition =
-            (glassShape || "").includes("slim")
-                ? "left"
-                : "top";
+            (glassShape || "").includes("slim") ? "left" : "top";
 
         setCustomWindows([]);
         setSlimSections([]);
@@ -247,6 +174,15 @@ function Configurator() {
         setLastWindowPosition(defaultPosition);
 
     }, [glassShape]);
+
+    // Original: picking a glass shape with no glass type selects Clear
+    useEffect(() => {
+
+        if (glassShape && !glassType) {
+            setGlassType("CLEAR");
+        }
+
+    }, [glassShape, glassType]);
 
     // Close the slim menu when leaving the Glazing tab
     useEffect(() => {
@@ -298,26 +234,159 @@ function Configurator() {
         activeTab
     ]);
 
-    console.log(doorInfo)
+    /* ==========================================
+       LIVE EW VALUES (run on every change)
+       Glazing part codes + price
+    ========================================== */
+
+    const liveValues = useMemo(() => {
+
+        const glazing = getGlazingCodeValues({
+            doorModel,
+            panelStyle,
+            glassShape,
+            glassType,
+            glassInsert,
+            temperedGlass,
+            frameColor,
+            insertColor,
+            windowPosition,
+            doorInfoSections: doorInfo.sections
+        });
+
+        const price = getPriceValues({
+            width,
+            height,
+            doorModel,
+            panelStyle,
+            glazing,
+            totals: doorInfo,
+            pricebook
+        });
+
+        return { ...glazing, ...price };
+
+    }, [
+        doorModel,
+        panelStyle,
+        glassShape,
+        glassType,
+        glassInsert,
+        temperedGlass,
+        frameColor,
+        insertColor,
+        windowPosition,
+        doorInfo,
+        width,
+        height,
+        pricebook
+    ]);
+
+    // PRICE / PRICE_DISPLAY are React-only (header display)
+    const ewLiveValues = useMemo(() => {
+
+        const { PRICE, PRICE_DISPLAY, ...rest } = liveValues;
+
+        return rest;
+
+    }, [liveValues]);
+
+    useEwSync(ewLiveValues);
+
+    /* ==========================================
+       CONFIGURE (original Configure() in FINAL_VALIDATION.js)
+    ========================================== */
+
+    const getConfigureContext = () => {
+
+        const colorObj = ALL_COLORS.find(
+            color => color.value === selectedColor
+        );
+
+        const modelAttrs = DOOR_MODEL_ATTRS[doorModel] || {};
+
+        return {
+
+            /* Live values that exist in EW (glazing codes + door face / glazing price) */
+            liveValues: ewLiveValues,
+
+            /* Full door info */
+            doorInfo,
+
+            /* Section bundle input (values come from React state) */
+            sectionBundleInput: {
+                width,
+                height,
+                numOfSections,
+
+                doorModel,
+                doorModelId: modelAttrs.id || "",
+                doorModelDesc: modelAttrs.desc || "",
+
+                panelStyle,
+                faceDesc: FACE_DESC[panelStyle] || "",
+                designPattern: DESIGN_PATTERNS[designCode] || "",
+
+                colorValue: selectedColor,
+                colorDesc: colorObj?.desc || "",
+
+                glassShape,
+                windowPosition,
+                doorInfoSections: doorInfo.sections,
+
+                endCaps: END_CAPS,
+                raynorDoor: RAYNOR_DOOR
+            },
+
+            /* Glazing code + scheduling input */
+            glazingInput: {
+                doorModel,
+                panelStyle,
+                glassShape,
+                glassType,
+                glassInsert,
+                temperedGlass,
+                windowPosition,
+                numOfSections,
+                width,
+                designCode,
+                selectedColor,
+                doorInfoSections: doorInfo.sections,
+                endCaps: END_CAPS
+            }
+
+        };
+    };
+
+
+    const handleConfigure = async (event) => {
+
+        event?.preventDefault?.();
+
+        if (configuring) {
+            return;
+        }
+
+        setConfiguring(true);
+
+        try {
+            await runConfigure(getConfigureContext);
+        } finally {
+            setConfiguring(false);
+        }
+    };
+
     /* ==========================================
        HELPERS
     ========================================== */
 
-    const renderSelectionIndicator = (
-        isSelected
-    ) =>
+    const renderSelectionIndicator = (isSelected) =>
         isSelected ? (
-            <div className="selection-indicator">
-                ✓
-            </div>
+            <div className="selection-indicator">✓</div>
         ) : null;
 
     const getCurrentEnabled = () =>
-        doorInfo.sections.map(
-            section => [...section.enabled]
-        );
-
-    /* Slim custom start (original resetSlimCustomState) */
+        doorInfo.sections.map(section => [...section.enabled]);
 
     const buildSlimCustomSeed = (seedPosition) => {
 
@@ -334,12 +403,7 @@ function Configurator() {
                 SINGLE_ENDCAP
             ).length;
 
-            return getEnabledWindows(
-                count,
-                index,
-                seedPosition || "left",
-                true
-            );
+            return getEnabledWindows(count, index, seedPosition || "left", true);
         });
 
         return { sections, enabled };
@@ -349,14 +413,11 @@ function Configurator() {
        HANDLERS
     ========================================== */
 
-    // Canvas click (custom selection)
     const handleWindowsChange = (enabled) => {
-
         setCustomWindows(enabled);
         setWindowPosition("custom");
     };
 
-    // Window position buttons
     const handleWindowPositionChange = (position) => {
 
         setSelectedSlimSection(null);
@@ -364,15 +425,10 @@ function Configurator() {
         if (position === "custom") {
 
             if (isSlimGlass) {
-
                 const seed = buildSlimCustomSeed(lastWindowPosition);
-
                 setSlimSections(seed.sections);
                 setCustomWindows(seed.enabled);
-
             } else {
-
-                // Start custom from what is on the canvas now
                 setCustomWindows(getCurrentEnabled());
             }
 
@@ -385,7 +441,6 @@ function Configurator() {
         setWindowPosition(position);
     };
 
-    // Pencil menu: Shape / Lites / Spacing
     const handleSlimSectionChange = (index, patch) => {
 
         const nextSections = Array.from(
@@ -393,44 +448,30 @@ function Configurator() {
             (_, i) => getSlimSectionConfig(slimSections, i, glassShape)
         );
 
-        const next = {
-            ...nextSections[index],
-            ...patch
-        };
+        const next = { ...nextSections[index], ...patch };
 
         nextSections[index] = next;
 
-        const count = getSlimSectionPositions(
-            next,
-            width,
-            SINGLE_ENDCAP
-        ).length;
+        const count = getSlimSectionPositions(next, width, SINGLE_ENDCAP).length;
 
-        const oldEnabled =
-            doorInfo.sections[index]?.enabled || [];
+        const oldEnabled = doorInfo.sections[index]?.enabled || [];
 
         let enabled;
 
         if (patch.slimOne === true) {
 
-            // One Lite: start with the center window
             enabled = Array(count).fill(false);
 
             if (count) {
                 enabled[Math.floor(count / 2)] = true;
             }
 
-        } else if (
-            !("shape" in patch) &&
-            oldEnabled.length === count
-        ) {
+        } else if (!("shape" in patch) && oldEnabled.length === count) {
 
-            // Same layout size: keep the selection
             enabled = [...oldEnabled];
 
         } else {
 
-            // Layout changed: user picks windows again
             enabled = Array(count).fill(false);
         }
 
@@ -442,13 +483,10 @@ function Configurator() {
         setCustomWindows(nextEnabled);
     };
 
-    /* ==========================================
-       RESET GLAZING
-    ========================================== */
-
     const resetGlazing = () => {
 
         setGlassShape("");
+        setGlassType("");
         setGlassInsert("");
 
         setWindowPosition("top");
@@ -460,12 +498,9 @@ function Configurator() {
 
         setTemperedGlass("");
 
-        // Frame and insert colours go back to the door colour
         setFrameColor(selectedColor);
         setInsertColor(selectedColor);
     };
-
-    /* Any panel change resets glazing */
 
     const handlePanelStyleChange = (value) => {
 
@@ -478,47 +513,39 @@ function Configurator() {
         resetGlazing();
     };
 
-    /* ==========================================
-       NAVIGATION
-    ========================================== */
-
     const handleNext = () => {
 
-        const currentIndex =
-            tabs.indexOf(activeTab);
+        const index = TABS.indexOf(activeTab);
 
-        if (
-            currentIndex < tabs.length - 1
-        ) {
-
-            setActiveTab(
-                tabs[currentIndex + 1]
-            );
-
+        if (index < TABS.length - 1) {
+            setActiveTab(TABS[index + 1]);
         }
-
     };
 
     const handleBack = () => {
 
-        const currentIndex =
-            tabs.indexOf(activeTab);
+        const index = TABS.indexOf(activeTab);
 
-        if (
-            currentIndex > 0
-        ) {
-
-            setActiveTab(
-                tabs[currentIndex - 1]
-            );
-
+        if (index > 0) {
+            setActiveTab(TABS[index - 1]);
         }
-
     };
+
+    /* ==========================================
+       RENDER
+    ========================================== */
 
     return (
 
         <div className="rw-configurator__layout">
+
+            {/* Configure loader (original canvas-loader-backdrop) */}
+
+            {configuring && (
+                <div className="canvas-loader-backdrop">
+                    <div className="canvas-loader" />
+                </div>
+            )}
 
             {/* LEFT SIDE */}
 
@@ -537,9 +564,7 @@ function Configurator() {
                             panelStyle={panelStyle}
                             windowPosition={windowPosition}
                             onPositionChange={handleWindowPositionChange}
-                            renderSelectionIndicator={
-                                renderSelectionIndicator
-                            }
+                            renderSelectionIndicator={renderSelectionIndicator}
                         />
                     )}
 
@@ -585,7 +610,9 @@ function Configurator() {
 
             <div className="rw-configurator__layout--right">
 
-                <HeaderSection />
+                <HeaderSection
+                    priceDisplay={liveValues.PRICE_DISPLAY}
+                />
 
                 {activeTab === "dimensions" && (
 
@@ -639,10 +666,7 @@ function Configurator() {
                         showPopularColors={showPopularColors}
                         setShowPopularColors={setShowPopularColors}
 
-                        renderSelectionIndicator={
-                            renderSelectionIndicator
-                        }
-
+                        renderSelectionIndicator={renderSelectionIndicator}
                     />
 
                 )}
@@ -652,6 +676,9 @@ function Configurator() {
                     <GlazingSection
                         glassShape={glassShape}
                         setGlassShape={setGlassShape}
+
+                        glassType={glassType}
+                        setGlassType={setGlassType}
 
                         glassInsert={glassInsert}
                         setGlassInsert={setGlassInsert}
@@ -673,88 +700,70 @@ function Configurator() {
                         insertColor={insertColor}
                         setInsertColor={setInsertColor}
 
-                        renderSelectionIndicator={
-                            renderSelectionIndicator
-                        }
+                        renderSelectionIndicator={renderSelectionIndicator}
+
+                        numOfWindows={numOfWindows}
+                        setNumOfWindows={setNumOfWindows}
                     />
 
                 )}
 
-                {activeTab === "hardware" && (
-                    <HardwareSection />
-                )}
+                {activeTab === "hardware" && <HardwareSection />}
 
-                {activeTab === "operator" && (
-                    <OperatorSection />
-                )}
+                {activeTab === "operator" && <OperatorSection />}
 
-                {activeTab === "advanced" && (
-                    <AdvancedSection />
-                )}
+                {activeTab === "advanced" && <AdvancedSection />}
 
-                {activeTab === "annotations" && (
-                    <AnnotationsSection />
-                )}
+                {activeTab === "annotations" && <AnnotationsSection />}
 
                 <div className="configurator-navigation">
 
                     <button
+                        type="button"
                         className="nav-button nav-button-dark"
-                        disabled={activeTab === tabs[0]}
+                        disabled={activeTab === TABS[0]}
                         onClick={handleBack}
                     >
-
                         <span className="nav-icon-left">
                             <IoIosArrowBack />
                         </span>
-
                         Back
-
                     </button>
 
                     <button
+                        type="button"
+                        id="CONFIGURE_BTN"
                         className="nav-button configure-button"
+                        disabled={configuring}
+                        onClick={handleConfigure}
                     >
                         Configure
                     </button>
 
                     <button
+                        type="button"
                         className="nav-button nav-button-dark"
-                        disabled={
-                            activeTab === tabs[tabs.length - 1]
-                        }
+                        disabled={activeTab === TABS[TABS.length - 1]}
                         onClick={handleNext}
                     >
-
                         Next
-
                         <span className="nav-icon-right">
                             <IoIosArrowForward />
                         </span>
-
                     </button>
+
                 </div>
 
                 <div className="configurator-footer-actions">
 
-                    <button
-                        className="default-link-button"
-                    >
+                    <button type="button" className="default-link-button">
                         <MdBookmark />
-
-                        <span>
-                            Save as Default
-                        </span>
+                        <span>Save as Default</span>
                     </button>
 
-                    <button
-                        className="default-link-button"
-                    >
+                    <button type="button" className="default-link-button">
                         <MdRestore />
-
-                        <span>
-                            Restore Default
-                        </span>
+                        <span>Restore Default</span>
                     </button>
 
                 </div>
@@ -762,9 +771,7 @@ function Configurator() {
             </div>
 
         </div>
-
     );
-
 }
 
 export default Configurator;

@@ -1,4 +1,5 @@
 import { useState } from "react";
+
 import GlassShape from "../../../components/Glazing/GlassShape";
 import GlassType from "../../../components/Glazing/GlassType";
 import GlassInsert from "../../../components/Glazing/GlassInsert";
@@ -7,20 +8,20 @@ import InsertColor from "../../../components/Glazing/InsertColor";
 import TemperedGlass from "../../../components/Glazing/TemperedGlass";
 import NumberOfWindows from "../../../components/Glazing/NumberOfWindows";
 
-
-
 function GlazingSection({
     glassShape,
     setGlassShape,
 
+    glassType,
+    setGlassType,
+
     glassInsert,
     setGlassInsert,
 
-    windowPosition,
-    setWindowPosition,
+    temperedGlass,
+    setTemperedGlass,
 
     doorModel,
-
     panelStyle,
 
     width,
@@ -34,37 +35,17 @@ function GlazingSection({
     insertColor,
     setInsertColor,
 
-    temperedGlass,
-    setTemperedGlass,
-
-    renderSelectionIndicator
-
+    renderSelectionIndicator,
+    numOfWindows,
+    setNumOfWindows
 }) {
 
-    const [glassType, setGlassType] =
-        useState("");
+    // UI-only state (not needed by canvas, price or EW)
 
-    const [showMoreGlassTypes,
-        setShowMoreGlassTypes] =
-        useState(false);
-
-
-
-    const [showMoreGlassInserts,
-        setShowMoreGlassInserts] =
-        useState(false);
-
-
-
-    const [showPopularFrameColors, setShowPopularFrameColors] =
-        useState(true);
-
-    const [showPopularInsertColors, setShowPopularInsertColors] =
-        useState(true);
-
-
-    const [numOfWindows, setNumOfWindows] =
-        useState("");
+    const [showMoreGlassTypes, setShowMoreGlassTypes] = useState(false);
+    const [showMoreGlassInserts, setShowMoreGlassInserts] = useState(false);
+    const [showPopularFrameColors, setShowPopularFrameColors] = useState(true);
+    const [showPopularInsertColors, setShowPopularInsertColors] = useState(true);
 
 
     return (
@@ -74,103 +55,66 @@ function GlazingSection({
                 panelStyle={panelStyle}
                 width={width}
                 selectedColor={selectedColor}
-
                 glassShape={glassShape}
                 setGlassShape={setGlassShape}
-
-                renderSelectionIndicator={
-                    renderSelectionIndicator
-                }
+                renderSelectionIndicator={renderSelectionIndicator}
             />
 
             <GlassType
                 doorModel={doorModel}
-
                 glassShape={glassShape}
-
                 glassType={glassType}
                 setGlassType={setGlassType}
-
                 showMoreGlassTypes={showMoreGlassTypes}
                 setShowMoreGlassTypes={setShowMoreGlassTypes}
-
-                renderSelectionIndicator={
-                    renderSelectionIndicator
-                }
+                renderSelectionIndicator={renderSelectionIndicator}
             />
 
             <GlassInsert
                 width={width}
                 panelStyle={panelStyle}
-
                 glassShape={glassShape}
-
                 glassInsert={glassInsert}
                 setGlassInsert={setGlassInsert}
-
                 showMoreGlassInserts={showMoreGlassInserts}
                 setShowMoreGlassInserts={setShowMoreGlassInserts}
-
-                renderSelectionIndicator={
-                    renderSelectionIndicator
-                }
+                renderSelectionIndicator={renderSelectionIndicator}
             />
 
             <FrameColor
                 glassShape={glassShape}
-
                 panelStyle={panelStyle}
-
                 frameColor={frameColor}
                 setFrameColor={setFrameColor}
-
                 showPopularFrameColors={showPopularFrameColors}
-                setShowPopularFrameColors={
-                    setShowPopularFrameColors
-                }
+                setShowPopularFrameColors={setShowPopularFrameColors}
             />
-
-
 
             <InsertColor
                 glassShape={glassShape}
                 panelStyle={panelStyle}
-
                 insertColor={insertColor}
                 setInsertColor={setInsertColor}
-
-                showPopularInsertColors={
-                    showPopularInsertColors
-                }
-                setShowPopularInsertColors={
-                    setShowPopularInsertColors
-                }
+                showPopularInsertColors={showPopularInsertColors}
+                setShowPopularInsertColors={setShowPopularInsertColors}
             />
 
             <TemperedGlass
                 temperedGlass={temperedGlass}
                 setTemperedGlass={setTemperedGlass}
-                renderSelectionIndicator={
-                    renderSelectionIndicator
-                }
+                renderSelectionIndicator={renderSelectionIndicator}
             />
 
             <NumberOfWindows
                 width={width}
                 panelStyle={panelStyle}
                 glassShape={glassShape}
-
                 numOfWindows={numOfWindows}
                 setNumOfWindows={setNumOfWindows}
-
-                renderSelectionIndicator={
-                    renderSelectionIndicator
-                }
+                renderSelectionIndicator={renderSelectionIndicator}
             />
-
         </>
     );
-
 }
 
 export default GlazingSection;
