@@ -20,6 +20,7 @@ import {
     getSlimSectionPositions,
     getEnabledWindows
 } from "../../components/Canvas/canvasWindowLayout";
+import { getTotalTrussQuantity } from "../../utils/trussSchedule";
 
 import { IoIosArrowForward, IoIosArrowBack } from "react-icons/io";
 
@@ -29,9 +30,6 @@ import {
 } from "react-icons/md";
 
 import "./Configurator.css";
-
-// End caps input is not built yet – original default is single
-const SINGLE_ENDCAP = true;
 
 function Configurator() {
 
@@ -120,6 +118,59 @@ function Configurator() {
     const [selectedSlimSection, setSelectedSlimSection] =
         useState(null);
 
+    const [annotations, setAnnotations] = useState({
+        TAG: "",
+        CONTRACTOR: "",
+        ARCHITECT: "",
+        REFERENCE: "",
+        CLIENT: ""
+    });
+
+    const [advancedOptions, setAdvancedOptions] = useState({
+        DOOROPT: "COMPLETEDOOR",
+        DRILL: "Y",
+        END_CAPS: "N",
+        EXTRA_TRUSS: "N",
+        SHAFT_TYPE: "T",
+        WINDOW_CUTOUTS: "N",
+        JAMB_SEAL_COLOR: "W",
+        TOP_SEAL: "N",
+        BOTTOM_SEAL: "N",
+        SNAP_LATCH_OPTION: "",
+        DEC_HARDWARE: "",
+        FULL_SETS: "NONE",
+        FULL_SETS_QTY: "0",
+        L_HANDLE: "NONE",
+        L_HANDLE_QTY: "0",
+        HANDLE: "NONE",
+        HANDLE_QTY: "0",
+        DOOR_KNOCKER: "NONE",
+        DOOR_KNOCKER_QTY: "0",
+        STRAPS: "NONE",
+        STRAPS_QTY: "0",
+        DOOR_STUDS: "N",
+        DOOR_STUDS_QTY: "0",
+        GRIPPER_SCREWS: "N",
+        MAGNETIC_SET: "NONE",
+        MAGNETIC_SET_QTY: "0",
+        jambSealColorUserOverride: false
+    });
+
+    const [operatorValue, setOperatorValue] =
+        useState("PS");
+
+    const [operatorBracket, setOperatorBracket] =
+        useState("");
+
+    const [operatorAccessories, setOperatorAccessories] = useState({
+        ADDITIONAL_TRANSMITTER: "NONE",
+        ADDITIONAL_TRANSMITTER_QTY: "0",
+        ADDITIONAL_CONTROL_PANEL: "NONE",
+        ADDITIONAL_CONTROL_PANEL_QTY: "0",
+        ADDITIONAL_KEYLESS_ENTRY: "NONE",
+        ADDITIONAL_KEYLESS_ENTRY_QTY: "0"
+    });
+
     const sizeMap = {
 
         "0": {
@@ -180,6 +231,16 @@ function Configurator() {
     const sectionCount =
         Number(numOfSections) || 4;
 
+    const singleEndcap =
+        advancedOptions.END_CAPS === "N";
+
+    const trussQuantity = getTotalTrussQuantity({
+        width,
+        height,
+        numOfSections,
+        extraTruss: advancedOptions.EXTRA_TRUSS === "Y"
+    });
+
     const isSlimGlass =
         (glassShape || "").includes("slim");
 
@@ -231,6 +292,19 @@ function Configurator() {
 
     }, [selectedColor]);
 
+    useEffect(() => {
+
+        setAdvancedOptions(previous => (
+            previous.jambSealColorUserOverride
+                ? previous
+                : {
+                    ...previous,
+                    JAMB_SEAL_COLOR: selectedColor
+                }
+        ));
+
+    }, [selectedColor]);
+
     // New glass shape: reset positions (slim -> Left, others -> Top)
     useEffect(() => {
 
@@ -278,7 +352,7 @@ function Configurator() {
         selectedSlimSection,
         temperedGlass,
         activeTab,
-        singleEndcap: SINGLE_ENDCAP
+        singleEndcap
     }), [
         width,
         height,
@@ -295,7 +369,8 @@ function Configurator() {
         slimSections,
         selectedSlimSection,
         temperedGlass,
-        activeTab
+        activeTab,
+        singleEndcap
     ]);
 
     console.log(doorInfo)
@@ -331,7 +406,7 @@ function Configurator() {
             const count = getSlimSectionPositions(
                 config,
                 width,
-                SINGLE_ENDCAP
+                singleEndcap
             ).length;
 
             return getEnabledWindows(
@@ -403,7 +478,7 @@ function Configurator() {
         const count = getSlimSectionPositions(
             next,
             width,
-            SINGLE_ENDCAP
+            singleEndcap
         ).length;
 
         const oldEnabled =
@@ -685,15 +760,36 @@ function Configurator() {
                 )}
 
                 {activeTab === "operator" && (
-                    <OperatorSection />
+                    <OperatorSection
+                        operatorValue={operatorValue}
+                        setOperatorValue={setOperatorValue}
+                        operatorBracket={operatorBracket}
+                        setOperatorBracket={setOperatorBracket}
+                        operatorAccessories={operatorAccessories}
+                        setOperatorAccessories={setOperatorAccessories}
+                        trussQuantity={trussQuantity}
+                        renderSelectionIndicator={
+                            renderSelectionIndicator
+                        }
+                    />
                 )}
 
                 {activeTab === "advanced" && (
-                    <AdvancedSection />
+                    <AdvancedSection
+                        advancedOptions={advancedOptions}
+                        setAdvancedOptions={setAdvancedOptions}
+                        panelStyle={panelStyle}
+                        renderSelectionIndicator={
+                            renderSelectionIndicator
+                        }
+                    />
                 )}
 
                 {activeTab === "annotations" && (
-                    <AnnotationsSection />
+                    <AnnotationsSection
+                        annotations={annotations}
+                        setAnnotations={setAnnotations}
+                    />
                 )}
 
                 <div className="configurator-navigation">
