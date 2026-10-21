@@ -3,36 +3,92 @@
    Full stylesheet for the React configurator.
    All rules are scoped to #react-root so ConfigureOne's
    cobalt.css (.cobalt.autodesk360 ...) cannot override them.
+   Scene backgrounds / Adjust scene / upload marker: Scene.css
 ========================================================== */
 
+
 /* ==========================================
-   1. LAYOUT (fixed height, only right side scrolls)
+   1. LAYOUT (full page, only right card list scrolls)
 ========================================== */
 
+/* ---------- ConfigureOne page overrides (full page width) ----------
+   cobalt.css sets #container / table#main to 96% + min-width 1120px.
+   The "rw-react-fullpage" body class is added by Configurator.js,
+   so these overrides only apply while the React configurator is open. */
+
+body.rw-react-fullpage #container,
+body.rw-react-fullpage #container table#main,
+body.rw-react-fullpage table.table-layout {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+}
+
+@media only screen and (min-width: 1025px) {
+
+    /* Keep the 90px offset for the ConfigureOne left menu,
+       fill the rest of the width (16px gap on the right) */
+    body.rw-react-fullpage #container table#main {
+        left: 90px !important;
+        width: calc(100% - 90px - 16px) !important;
+    }
+}
+
+/* Porsche style: two separate columns with a gap, no outer box */
 #react-root .rw-configurator__layout {
     display: flex;
+    gap: 28px;
     width: 100%;
-    height: calc(100vh - 150px);
+    height: var(--rw-layout-height, calc(100vh - 150px));
     min-height: 0;
     overflow: hidden;
-    background: #fff;
-    border-radius: 20px;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, .09);
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
     box-sizing: border-box;
 }
 
-/* ---------- Left ---------- */
+/* ---------- Left: toolbar + rounded scene (60%) ---------- */
 
 #react-root .rw-configurator__layout--left {
-    flex: 0 0 60%;
+    flex: 3 1 0;
+    min-width: 0;
     height: 100%;
     min-height: 0;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
-    background: radial-gradient(circle,
-            rgba(255, 255, 255, 1) 0%,
-            rgba(180, 180, 180, 1) 100%);
+    background: transparent;
+}
+
+/* ---------- Scene toolbar (Change product type / Save / Restore) ----------
+   Same height as the right top bar so both rows line up. */
+
+#react-root .scene-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    flex-shrink: 0;
+    min-height: 82px;
+    margin-bottom: 12px;
+    padding: 0 4px;
+}
+
+#react-root .scene-toolbar__menu {
+    position: relative;
+}
+
+#react-root .scene-toolbar__dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 60;
+    min-width: 200px;
+    padding: 6px;
+    background: #fff;
+    border: 1px solid #e3e4e5;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
 #react-root .canvas-area {
@@ -44,27 +100,227 @@
     align-items: center;
 }
 
-#react-root .canvas-footer {
-    flex-shrink: 0;
-    text-align: center;
-    padding-bottom: 20px;
-    color: #666;
-    font-size: 14px;
+/* ---------- Scene ----------
+   Photo + night tint are absolute (z-index -1, behind).
+   The door stage is in normal flow (margins set from JS),
+   so the zoom controls anchor to the scene, not to the door. */
+
+#react-root .canvas-area.house-scene {
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 20px;
+    background: #dfe9f2;
+    transition: background .6s ease;
 }
 
-/* ---------- Right ---------- */
+#react-root .house-scene__image {
+    position: absolute;
+    z-index: -1;
+    max-width: none;
+    user-select: none;
+    pointer-events: none;
+    animation: rw-scene-fade .3s ease;
+    transition:
+        left .45s ease, top .45s ease, width .45s ease, height .45s ease,
+        filter .6s ease;
+}
+
+#react-root .house-scene__stage {
+    position: static;
+    display: block;
+    transition: margin .45s ease, width .45s ease, height .45s ease;
+}
+
+/* overflow visible: the slim popup opens to the right of the door,
+   outside the small stage. The scene still clips everything. */
+#react-root .house-scene__stage .door-canvas-viewport {
+    position: static;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+#react-root .house-scene__stage .door-canvas-wrapper {
+    height: 100%;
+}
+
+#react-root .house-scene__stage .door-canvas-wrapper canvas {
+    height: 100%;
+    width: auto;
+    max-width: none;
+    transition: filter .6s ease;
+}
+
+/* Popup above the window-position bar / footer */
+#react-root .house-scene__stage .slim-options-container {
+    z-index: 45;
+}
+
+/* ---------- Day / Night ---------- */
+
+/* Night sky tint (over the photo, behind the door) */
+#react-root .house-scene__night-tint {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(180deg,
+            rgba(8, 18, 58, 0.55) 0%,
+            rgba(10, 22, 60, 0.30) 55%,
+            rgba(0, 0, 0, 0.20) 100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .6s ease;
+}
+
+/* Warm lantern glow (above the door – light spills onto the edges) */
+#react-root .house-scene__light {
+    position: absolute;
+    z-index: 2;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+            rgba(255, 214, 150, 0.95) 0%,
+            rgba(255, 176, 90, 0.45) 18%,
+            rgba(255, 150, 60, 0.15) 45%,
+            rgba(255, 140, 50, 0) 70%);
+    mix-blend-mode: screen;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        opacity .6s ease,
+        left .45s ease, top .45s ease, width .45s ease, height .45s ease;
+}
+
+#react-root .house-scene.night {
+    background: #0b1530;
+}
+
+#react-root .house-scene.night .house-scene__image {
+    filter: brightness(0.42) saturate(0.75) contrast(1.05);
+}
+
+#react-root .house-scene.night .house-scene__night-tint {
+    opacity: 1;
+}
+
+#react-root .house-scene.night .house-scene__light {
+    opacity: 1;
+}
+
+#react-root button.scene-controls__option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+#react-root button.scene-controls__option svg {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+/* Door slightly brighter than the house – lit by the lanterns */
+#react-root .house-scene.night .house-scene__stage .door-canvas-wrapper canvas {
+    filter: brightness(0.62) saturate(0.85) sepia(0.12);
+}
+
+/* ---------- Window position: white toolbar over the photo ---------- */
+
+#react-root .house-scene__window-position {
+    position: absolute;
+    top: 16px;
+    left: 0;
+    right: 0;
+    z-index: 35;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+}
+
+#react-root .house-scene__window-position .window-position-wrapper {
+    width: auto;
+    margin: 0;
+    padding: 8px 10px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid #e3e4e5;
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+    pointer-events: auto;
+}
+
+/* Small title, no side lines */
+#react-root .house-scene__window-position .window-position-header {
+    margin: 0;
+}
+
+#react-root .house-scene__window-position .window-position-header::before,
+#react-root .house-scene__window-position .window-position-header::after {
+    display: none;
+}
+
+#react-root .house-scene__window-position .window-position-header span {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .8px;
+    color: #6b6d70;
+}
+
+/* One solid white panel – no second strip behind the buttons */
+#react-root .house-scene__window-position .window-position-buttons {
+    gap: 4px;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+}
+
+/* ✓ indicator – same as other buttons, sized for the shorter button */
+#react-root .house-scene__window-position .selection-indicator {
+    right: 7px;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+}
+
+#react-root .canvas-footer {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    z-index: 35;
+    transform: translateX(-50%);
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.85);
+    color: #333;
+    font-size: 13px;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* ---------- Right: top bar + floating cards (40%) ---------- */
 
 #react-root .rw-configurator__layout--right {
-    flex: 0 0 40%;
+    flex: 2 1 0;
+    min-width: 0;
     height: 100%;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 20px;
+    overflow: hidden;
+    padding: 0;
+    background: transparent;
     box-sizing: border-box;
 }
+
 
 /* ==========================================
    2. CANVAS + ZOOM
@@ -133,6 +389,7 @@
     color: #333;
 }
 
+
 /* ==========================================
    3. WINDOW POSITION
 ========================================== */
@@ -177,6 +434,7 @@
     justify-content: center;
     gap: 8px;
 }
+
 
 /* ==========================================
    4. SLIM EDITOR (pencil + configure menu)
@@ -286,39 +544,171 @@
     font-weight: 700;
 }
 
+
 /* ==========================================
-   5. HEADER
+   5. TOP BAR + HEADER (serial / price / Configure)
 ========================================== */
+
+#react-root .config-topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+    margin: 0 6px 12px 4px;
+    padding: 16px 20px;
+    background: #fff;
+    border: 1px solid #e3e4e5;
+    border-radius: 16px;
+}
 
 #react-root .configurator-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 8px;
+    flex: 1 1 auto;
+    gap: 12px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
 }
 
 #react-root .serial-number {
-    font-size: 14px;
-    font-weight: 600;
-    color: #222;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b6d70;
 }
 
 #react-root .serial-value {
     margin-left: 4px;
     font-weight: 700;
+    color: #010205;
 }
 
 #react-root .price-display {
     font-size: 22px;
     font-weight: 700;
-    font-style: italic;
-    color: #333;
+    font-style: normal;
+    color: #010205;
     line-height: 1;
+    white-space: nowrap;
 }
 
+
 /* ==========================================
-   6. SECTIONS
+   6. CARDS (Porsche style – open by default, collapsible)
+========================================== */
+
+#react-root .config-accordion-scroll {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* small padding so card shadows / active border are not clipped */
+    padding: 4px 6px 24px 4px;
+}
+
+#react-root .config-accordion-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+#react-root .config-accordion-scroll::-webkit-scrollbar-thumb {
+    background: #c9cacb;
+    border-radius: 3px;
+}
+
+#react-root .config-card {
+    flex-shrink: 0;
+    background: #fff;
+    border: 1px solid #e3e4e5;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+#react-root .config-card:hover {
+    border-color: #c9cacb;
+}
+
+/* Card currently in view (scroll-spy) */
+#react-root .config-card.active {
+    border-color: #010205;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+#react-root .config-card__title {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #010205;
+}
+
+#react-root .config-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+#react-root .config-card__badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #e3e4e5;
+    color: #010205;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Chevron: up when open, down when collapsed */
+#react-root .config-card__chevron {
+    flex-shrink: 0;
+    font-size: 24px;
+    color: #010205;
+    transform: rotate(180deg);
+    transition: transform .2s ease;
+}
+
+#react-root .config-card.collapsed .config-card__chevron {
+    transform: rotate(0deg);
+}
+
+#react-root .config-card__body {
+    padding: 18px 22px 22px;
+    border-top: 1px solid #eeeeee;
+}
+
+#react-root .config-card__body .landmark-section:last-child,
+#react-root .config-card__body .door-model-buttons:last-child {
+    margin-bottom: 0;
+}
+
+/* Placeholder sections (Hardware / Operator / ... Bootstrap Card) */
+#react-root .config-card__body>.card {
+    border: none;
+    margin-bottom: 0 !important;
+}
+
+#react-root .config-card__body>.card .card-body {
+    padding: 0;
+}
+
+#react-root .config-card__body>.card h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b6d70;
+}
+
+
+/* ==========================================
+   7. SECTIONS
 ========================================== */
 
 #react-root .configurator-section h2 {
@@ -352,8 +742,9 @@
     margin-bottom: 20px;
 }
 
+
 /* ==========================================
-   7. OPTION BUTTONS (div + button versions)
+   8. OPTION BUTTONS (div versions)
 ========================================== */
 
 #react-root .door-model-button,
@@ -405,8 +796,9 @@
     font-weight: 700;
 }
 
+
 /* ==========================================
-   8. TOGGLE
+   9. TOGGLE
 ========================================== */
 
 #react-root .landmark-toggle-row {
@@ -457,14 +849,14 @@
     left: 38px;
 }
 
+
 /* ==========================================
-   9. CUSTOM DIMENSION / SELECTS
+   10. CUSTOM DIMENSION / SELECTS
 ========================================== */
 
 #react-root .landmark-custom-dimension-container {
     display: grid;
-    grid-template-columns:
-        minmax(160px, 1fr) minmax(160px, 1fr) minmax(140px, 1fr) minmax(140px, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
     align-items: start;
     width: 100%;
@@ -492,6 +884,7 @@
 
 #react-root .dimension-dropdown-row select {
     flex: 1;
+    min-width: 0;
 }
 
 #react-root .design-code-layout {
@@ -517,8 +910,9 @@
     min-height: 18px;
 }
 
+
 /* ==========================================
-   10. COLOURS
+   11. COLOURS
 ========================================== */
 
 #react-root .colorChooser {
@@ -540,39 +934,154 @@
     align-items: center;
 }
 
+/* Same height as the 50px circles */
 #react-root .divider {
     width: 1px;
-    height: 42px;
+    height: 50px;
     background: #D9D9D9;
     flex-shrink: 0;
 }
 
+/* ---------- Stack of 3 circles ----------
+   Width = last offset (40px) + circle size (50px) = 90px */
+
 #react-root .stack-wrapper {
     position: relative;
-    width: 72px;
-    height: 42px;
+    z-index: 1;
+    width: 90px;
+    height: 50px;
     cursor: pointer;
     flex-shrink: 0;
+    overflow: visible;
+    outline: none;
 }
 
 #react-root .stack-color {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
     position: absolute;
+    top: 0;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-sizing: border-box;
 }
 
-#react-root .stack-1 { left: 0; }
-#react-root .stack-2 { left: 12px; }
-#react-root .stack-3 { left: 24px; }
+#react-root .stack-1 {
+    left: 0;
+    z-index: 1;
+}
+
+#react-root .stack-2 {
+    left: 20px;
+    z-index: 2;
+}
+
+#react-root .stack-3 {
+    left: 40px;
+    z-index: 3;
+}
+
+/* Hovered stack sits above the next rows (Finish etc.) */
+#react-root .stack-wrapper:hover,
+#react-root .stack-wrapper:focus-visible {
+    z-index: 60;
+}
+
+/* Original hover nudge toward the tooltip */
+#react-root .stack-tooltip-right:hover,
+#react-root .stack-tooltip-right:focus-visible {
+    transform: translateX(6px);
+}
+
+#react-root .stack-tooltip-bottom:hover,
+#react-root .stack-tooltip-bottom:focus-visible {
+    transform: translateY(6px);
+}
+
+/* ---------- Tooltip box (original size + style) ---------- */
+
+#react-root .stack-tooltip {
+    position: absolute;
+    z-index: 60;
+    box-sizing: border-box;
+    width: 90px;
+    padding: 15px;
+    background: #fff !important;
+    color: #333;
+    border-radius: 9px;
+    box-shadow: 0 0 3px rgba(56, 54, 54, 0.86);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.25;
+    text-align: left;
+    white-space: normal;
+    word-break: normal;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .2s ease, visibility .2s ease;
+}
+
+#react-root .stack-wrapper:hover .stack-tooltip,
+#react-root .stack-wrapper:focus-visible .stack-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Arrow */
+#react-root .stack-tooltip::after {
+    content: "";
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 5px;
+}
+
+/* ----- Below (Popular colours) ----- */
+
+#react-root .stack-tooltip-bottom .stack-tooltip {
+    top: calc(100% + 10px);
+    left: 0;
+}
+
+#react-root .stack-tooltip-bottom .stack-tooltip::after {
+    bottom: 100%;
+    left: 40px;
+    border-color: transparent transparent #333 transparent;
+}
+
+/* ----- Right (Other colours) ----- */
+
+#react-root .stack-tooltip-right .stack-tooltip {
+    top: 50%;
+    left: calc(100% + 10px);
+    transform: translateY(-50%);
+}
+
+#react-root .stack-tooltip-right .stack-tooltip::after {
+    top: 50%;
+    right: 100%;
+    transform: translateY(-50%);
+    border-color: transparent #333 transparent transparent;
+}
+
+/* Card clips overflow – let the tooltip show while hovered */
+#react-root .config-card:has(.stack-wrapper:hover),
+#react-root .config-card:has(.stack-wrapper:focus-visible) {
+    overflow: visible;
+}
+
+/* ---------- Single colour circles ---------- */
 
 #react-root .color-circle {
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     box-sizing: border-box;
     cursor: pointer;
     position: relative;
+    flex-shrink: 0;
 }
 
 #react-root .color-circle-fill {
@@ -580,7 +1089,6 @@
     height: 100%;
     border-radius: 50%;
     position: relative;
-    border: 1px solid rgba(0, 0, 0, .15);
 }
 
 #react-root .color-circle.active {
@@ -593,6 +1101,7 @@
     content: "";
 }
 
+/* Colour name tooltip */
 #react-root .color-tooltip {
     position: relative;
 }
@@ -639,7 +1148,7 @@
 }
 
 /* ==========================================
-   11. SEGMENTED TOGGLE (Number of Windows)
+   12. SEGMENTED TOGGLE (Number of Windows)
 ========================================== */
 
 #react-root .segmented-toggle {
@@ -688,50 +1197,6 @@
     font-weight: 700;
 }
 
-/* ==========================================
-   12. NAVIGATION + FOOTER
-========================================== */
-
-#react-root .configurator-navigation {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: auto;
-    padding-top: 20px;
-    border-top: 1px solid #d9d9d9;
-    gap: 12px;
-}
-
-#react-root .nav-icon-left,
-#react-root .nav-icon-right {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: #fff;
-    color: #333;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#react-root .nav-icon-left { left: 12px; }
-#react-root .nav-icon-right { right: 12px; }
-
-#react-root .nav-icon-left svg,
-#react-root .nav-icon-right svg {
-    font-size: 18px;
-    color: #333;
-}
-
-#react-root .configurator-footer-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 16px;
-}
 
 /* ==========================================
    13. BUTTONS (beat cobalt.css)
@@ -791,80 +1256,147 @@
     cursor: not-allowed;
 }
 
-/* Back / Next / Configure */
-#react-root button.nav-button {
+/* Window position toolbar (over the photo) – same colours as other buttons */
+#react-root .house-scene__window-position button.door-size-button {
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 180px;
-    height: 42px;
-    border-radius: 14px;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-#react-root button.nav-button-dark {
-    background: #3a393d;
-    color: #fff;
-    border: none;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, .2);
-}
-
-#react-root button.nav-button-dark:hover:not(:disabled) {
-    background: #2f2e32;
-}
-
-#react-root button.configure-button {
+    width: auto;
+    min-width: 92px;
+    height: 32px;
+    padding: 0 28px 0 14px;
     background: #fff;
-    color: #000;
-    border: 2px solid #333;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, .15);
+    color: #222;
+    border: 1px solid #999;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all .15s ease;
 }
 
-#react-root button.configure-button:hover:not(:disabled) {
-    background: #f3f3f3;
+#react-root .house-scene__window-position button.door-size-button:hover {
+    background: #E4E4E4;
 }
 
-#react-root button.nav-button:disabled {
-    opacity: .5;
+#react-root .house-scene__window-position button.door-size-button.active,
+#react-root .house-scene__window-position button.door-size-button.active:hover {
+    background: #D9D9D9;
+    color: #222;
+    border: 1px solid #333;
+    font-weight: 700;
+}
+
+#react-root .house-scene__window-position button.door-size-button.disabled,
+#react-root .house-scene__window-position button.door-size-button.disabled:hover,
+#react-root .house-scene__window-position button.door-size-button:disabled {
+    background: #999;
+    color: #fff;
+    border: 1px solid #999;
     cursor: not-allowed;
 }
 
-#react-root button.configure-button:disabled {
+/* Scene toolbar buttons (plain text links, Porsche style) */
+#react-root button.scene-toolbar__button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 6px;
+    background: transparent;
+    color: #010205;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+#react-root button.scene-toolbar__button svg {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+#react-root button.scene-toolbar__button:hover,
+#react-root button.scene-toolbar__button[aria-expanded="true"] {
+    background: #E4E4E4;
+}
+
+/* Product type options – same colours as other option buttons */
+#react-root button.scene-toolbar__option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 36px;
+    padding: 0 12px;
+    background: #fff;
+    color: #222;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+}
+
+#react-root button.scene-toolbar__option:hover {
+    background: #E4E4E4;
+}
+
+#react-root button.scene-toolbar__option.active {
+    background: #D9D9D9;
+    font-weight: 700;
+}
+
+#react-root button.scene-toolbar__option svg {
+    font-size: 18px;
+}
+
+/* Configure (top bar) */
+#react-root button.config-topbar__configure {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 160px;
+    height: 48px;
+    padding: 0 28px;
+    background: #010205;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+#react-root button.config-topbar__configure:hover:not(:disabled) {
+    background: #323639;
+}
+
+#react-root button.config-topbar__configure:disabled {
     opacity: .6;
     cursor: wait;
 }
 
-/* Save / Restore Default */
-#react-root button.default-link-button {
+/* Card header */
+#react-root button.config-card__header {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 8px;
-    background: transparent;
-    color: #222;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 64px;
+    padding: 18px 22px;
+    background: #fff;
     border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
+    border-radius: 0;
+    text-align: left;
     cursor: pointer;
-    transition: all .15s ease;
+    transition: background .15s ease;
 }
 
-#react-root button.default-link-button svg {
-    font-size: 18px;
-    flex-shrink: 0;
-}
-
-#react-root button.default-link-button:hover {
-    background: rgba(0, 0, 0, 0.06);
-    color: #000;
-}
-
-#react-root button.default-link-button:active {
-    background: rgba(0, 0, 0, 0.1);
+#react-root button.config-card__header:hover {
+    background: #fafafa;
 }
 
 /* Zoom controls */
@@ -921,8 +1453,9 @@
     color: #000;
 }
 
+
 /* ==========================================
-   14. CONFIGURE LOADER
+   14. CONFIGURE LOADER + ANIMATIONS
 ========================================== */
 
 .canvas-loader-backdrop {
@@ -960,13 +1493,252 @@
     animation: rw-rotation 0.5s linear infinite reverse;
 }
 
+@keyframes rw-scene-fade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
 @keyframes rw-rotation {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* ==========================================
-   15. RESPONSIVE
+   HARDWARE SECTION  
+========================================== */
+
+/* ---------- Rows ---------- */
+
+#react-root .hw-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+    margin-bottom: 16px;
+}
+
+#react-root .hw-row.three {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/* Columns inside a row: spacing comes from the row
+   (the :last-child rule in section 6 removed it before) */
+#react-root .config-card__body .hw-row > .landmark-section {
+    margin-bottom: 0;
+}
+
+/* Last row in the card – no extra space at the bottom */
+#react-root .config-card__body .hw-section > .hw-row:last-child {
+    margin-bottom: 0;
+}
+
+/* ---------- Headers: same height for <div> and <label>
+   (ConfigureOne adds padding / margin to every label) ---------- */
+
+#react-root .hw-section .landmark-section-header,
+#react-root .hw-section label.landmark-section-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 20px;
+    margin: 0 0 8px;
+    padding: 0;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 20px;
+    color: #333;
+}
+
+/* ---------- Two-option switch: full column width ---------- */
+
+#react-root .hw-segmented.segmented-toggle {
+    width: 100%;
+}
+
+#react-root .hw-segmented .segmented-option {
+    padding: 0 28px 0 12px;
+    user-select: none;
+}
+
+#react-root .hw-segmented .segmented-option:not(.active):not(.disabled):hover {
+    background: #E4E4E4;
+}
+
+/* Same disabled look as the old rw-sliding-button.disabled */
+#react-root .hw-segmented .segmented-option.disabled {
+    color: #b3b3b3;
+    cursor: not-allowed;
+}
+
+/* ---------- Lift type grid (labels can be 2 lines) ---------- */
+
+#react-root .hw-lift-grid .door-model-button {
+    height: auto;
+    min-height: 35px;
+    padding: 6px 28px 6px 10px;
+    line-height: 1.2;
+    text-align: center;
+}
+
+/* ---------- Selects ---------- */
+
+#react-root select.hw-select {
+    width: 100%;
+    height: 35px;
+    margin: 0;
+    padding: 0 10px;
+    border: 1px solid #999;
+    border-radius: 8px;
+    background: #fff;
+    color: #222;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+    box-shadow: none;
+    cursor: pointer;
+}
+
+#react-root select.hw-select:hover {
+    background: #E4E4E4;
+}
+
+#react-root select.hw-select:focus {
+    outline: none;
+    border-color: #333;
+}
+
+/* ---------- Quantity stepper ---------- */
+
+#react-root .hw-qty {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    height: 35px;
+    border: 1px solid #999;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+#react-root button.hw-qty__btn {
+    flex: 0 0 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 100%;
+    background: #f5f5f5;
+    color: #222;
+    border: none;
+    border-radius: 0;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#react-root button.hw-qty__btn:hover:not(:disabled) {
+    background: #E4E4E4;
+}
+
+#react-root button.hw-qty__btn:disabled {
+    color: #bbb;
+    cursor: not-allowed;
+}
+
+#react-root input.hw-qty__input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: none !important;
+    border-left: 1px solid #ddd !important;
+    border-right: 1px solid #ddd !important;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none !important;
+    outline: none;
+    color: #222;
+    font-size: 14px;
+    font-family: inherit;
+    text-align: center;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+#react-root input.hw-qty__input::-webkit-outer-spin-button,
+#react-root input.hw-qty__input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* ---------- High lift slider ---------- */
+
+#react-root input.hw-range {
+    width: 100%;
+    margin: 6px 0 0;
+    accent-color: #333;
+    cursor: pointer;
+}
+
+#react-root .hw-range__limits {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #6b6d70;
+}
+
+#react-root .hw-divider-text {
+    margin: 0 8px;
+    color: #bbb;
+}
+
+/* ---------- Info link + notes ---------- */
+
+/* "?" icon no taller than the header text */
+#react-root a.hw-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    border-radius: 50%;
+    background: #E4E4E4;
+    color: #333;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 18px;
+    text-decoration: none;
+}
+
+#react-root a.hw-info:hover {
+    background: #D9D9D9;
+}
+
+/* Note under a switch ("Extension not available ...") */
+#react-root .hw-note {
+    margin: 6px 0 0;
+    font-size: 12px;
+    line-height: 1.3;
+    color: #6b6d70;
+}
+
+/* ==========================================
+    RESPONSIVE
 ========================================== */
 
 @media (min-width: 2200px) {
@@ -981,6 +1753,7 @@
 
     #react-root .rw-configurator__layout {
         flex-direction: column;
+        gap: 20px;
         height: auto;
         overflow: visible;
     }
@@ -988,13 +1761,22 @@
     #react-root .rw-configurator__layout--left {
         flex: none;
         width: 100%;
-        height: 60vh;
+        height: calc(60vh + 94px);
+    }
+
+    #react-root .scene-toolbar {
+        min-height: 0;
+        padding-top: 4px;
     }
 
     #react-root .rw-configurator__layout--right {
         flex: none;
         width: 100%;
         height: auto;
+        overflow: visible;
+    }
+
+    #react-root .config-accordion-scroll {
         overflow-y: visible;
     }
 
@@ -1005,16 +1787,34 @@
 
 @media (max-width: 768px) {
 
-    #react-root .rw-configurator__layout {
-        border-radius: 10px;
-    }
-
     #react-root .rw-configurator__layout--left {
-        height: 50vh;
+        height: calc(50vh + 94px);
     }
 
-    #react-root .rw-configurator__layout--right {
-        padding: 15px;
+    #react-root .canvas-area.house-scene {
+        border-radius: 12px;
+    }
+
+    #react-root .scene-toolbar {
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    #react-root .config-topbar {
+        flex-wrap: wrap;
+        padding: 12px 15px;
+    }
+
+    #react-root button.config-topbar__configure {
+        width: 100%;
+    }
+
+    #react-root .config-accordion-scroll {
+        padding: 4px 4px 20px;
+    }
+
+    #react-root .config-card__title {
+        font-size: 18px;
     }
 
     #react-root .door-size-grid {
@@ -1032,5 +1832,10 @@
 
     #react-root .window-position-buttons {
         flex-wrap: wrap;
+    }
+
+    #react-root .hw-row,
+    #react-root .hw-row.three {
+        grid-template-columns: 1fr;
     }
 }

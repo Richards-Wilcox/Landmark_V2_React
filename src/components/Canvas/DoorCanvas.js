@@ -62,6 +62,10 @@ function DoorCanvas({
 
     numOfSections,
 
+    // NUM_OF_PANELS / NUM_OF_WINDOWS (default or special value)
+    numOfPanels,
+    numOfWindows,
+
     selectedColor,
     finish,
 
@@ -198,8 +202,8 @@ function DoorCanvas({
     };
 
     /* ==========================================
-   MOUSE WHEEL ZOOM (zooms toward the cursor)
-========================================== */
+       MOUSE WHEEL ZOOM (zooms toward the cursor)
+    ========================================== */
 
     useEffect(() => {
 
@@ -273,6 +277,10 @@ function DoorCanvas({
 
     const shape = glassShape || "";
 
+    // Numbers used by getPanelPositions special check
+    const selectedPanels = Number(numOfPanels) || 0;
+    const selectedWindows = Number(numOfWindows) || 0;
+
     /* ==========================================
        SHARED LAYOUT (used by drawing AND clicking)
     ========================================== */
@@ -310,7 +318,9 @@ function DoorCanvas({
             windowPosition,
             customWindows,
             slimSections,
-            selectedSlimSection
+            selectedSlimSection,
+            numOfPanels: selectedPanels,
+            numOfWindows: selectedWindows
         });
 
         return {
@@ -333,7 +343,9 @@ function DoorCanvas({
         windowPosition,
         customWindows,
         slimSections,
-        selectedSlimSection
+        selectedSlimSection,
+        selectedPanels,
+        selectedWindows
     ]);
 
     const hintsVisible = getHintsVisible({
@@ -542,12 +554,16 @@ function DoorCanvas({
                 const dimensions =
                     getPanelDimensions(panelType);
 
+                // NUM_OF_PANELS special value changes the
+                // punch count + spacing (original getPanelPositions)
                 const defaultPositions =
                     getPanelPositions({
                         panelType,
                         doorWidth: width,
                         face: panelStyle,
-                        glassShape: ""
+                        glassShape: shape,
+                        selectedPanels,
+                        selectedWindows
                     });
 
                 for (
@@ -740,21 +756,23 @@ function DoorCanvas({
         glassInsert,
 
         windowPosition,
-        hintsVisible
+        hintsVisible,
+
+        selectedPanels,
+        selectedWindows
     ]);
-
-
-    // Ignore the click that ends a drag
-    if (movedRef.current) {
-        movedRef.current = false;
-        return;
-    }
 
     /* ==========================================
        CLICK TO SELECT WINDOW (original click.canvasFix)
     ========================================== */
 
     const handleCanvasClick = (event) => {
+
+        // Ignore the click that ends a drag (pan while zoomed).
+        if (movedRef.current) {
+            movedRef.current = false;
+            return;
+        }
 
         if (!canSelectWindows || !onWindowsChange) {
             return;

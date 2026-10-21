@@ -10,35 +10,146 @@ import { useEffect, useState } from "react";
    PRICEBOOK (original loadPricebook)
 ---------------------------------------------------------- */
 
+// export function usePricebook() {
+
+//     const [pricebook, setPricebook] = useState(
+//         window.PRICEBOOK_CACHE || {}
+//     );
+
+//     useEffect(() => {
+
+//         const customerName = encodeURIComponent(
+//             document.ui?.DC_CUSTOMER_NAME?.value || ""
+//         );
+
+//         fetch(`/spr/custom/jpoc/json/1728612690?customer=${customerName}`, {
+//             method: "POST"
+//         })
+//             .then(res => res.json())
+//             .then(res => {
+//                 const book = Array.isArray(res) ? (res[0] || {}) : (res || {});
+//                 window.PRICEBOOK_CACHE = book;
+//                 setPricebook(book);
+//             })
+//             .catch(err => {
+//                 console.error("Pricebook load failed:", err);
+//             });
+
+//     }, []);
+
+//     return pricebook;
+// }
+
+/* ----------------------------------------------------------
+   PRICEBOOK (original loadPricebook)
+   - Cached per customer in sessionStorage (30 min)
+   - One shared request (no duplicate calls)
+---------------------------------------------------------- */
+
+const PRICEBOOK_URL = "/spr/custom/jpoc/json/1728612690";
+const PRICEBOOK_TTL = 30 * 60 * 1000; // 30 minutes
+
+const pricebookRequests = {};
+
+const getCustomerName = () =>
+    document.ui?.DC_CUSTOMER_NAME?.value || "";
+
+const getCacheKey = (customer) => `RW_PRICEBOOK_${customer}`;
+
+const readCachedPricebook = (customer) => {
+
+    try {
+
+        const cached = JSON.parse(
+            sessionStorage.getItem(getCacheKey(customer)) || "null"
+        );
+
+        if (cached && Date.now() - cached.time < PRICEBOOK_TTL) {
+            return cached.book;
+        }
+
+    } catch (err) {
+        // Ignore broken cache
+    }
+
+    return null;
+};
+
+const loadPricebook = (customer) => {
+
+    if (!pricebookRequests[customer]) {
+
+        pricebookRequests[customer] = fetch(
+            `${PRICEBOOK_URL}?customer=${encodeURIComponent(customer)}`,
+            { method: "POST" }
+        )
+            .then(res => res.json())
+            .then(res => {
+
+                const book = Array.isArray(res) ? (res[0] || {}) : (res || {});
+
+                try {
+                    sessionStorage.setItem(
+                        getCacheKey(customer),
+                        JSON.stringify({ time: Date.now(), book })
+                    );
+                } catch (err) {
+                    // Storage full / disabled – keep in memory only
+                }
+
+                return book;
+            })
+            .catch(err => {
+                delete pricebookRequests[customer];
+                throw err;
+            });
+    }
+
+    return pricebookRequests[customer];
+};
+
 export function usePricebook() {
 
-    const [pricebook, setPricebook] = useState(
-        window.PRICEBOOK_CACHE || {}
+    const [pricebook, setPricebook] = useState(() =>
+        window.PRICEBOOK_CACHE ||
+        readCachedPricebook(getCustomerName()) ||
+        {}
     );
 
     useEffect(() => {
 
-        const customerName = encodeURIComponent(
-            document.ui?.DC_CUSTOMER_NAME?.value || ""
-        );
+        const customer = getCustomerName();
+        const cached = readCachedPricebook(customer);
 
-        fetch(`/spr/custom/jpoc/json/1728612690?customer=${customerName}`, {
-            method: "POST"
-        })
-            .then(res => res.json())
-            .then(res => {
-                const book = Array.isArray(res) ? (res[0] || {}) : (res || {});
+        if (cached) {
+            window.PRICEBOOK_CACHE = cached;
+            setPricebook(cached);
+            return undefined;
+        }
+
+        let active = true;
+
+        loadPricebook(customer)
+            .then(book => {
                 window.PRICEBOOK_CACHE = book;
-                setPricebook(book);
+
+                if (active) {
+                    setPricebook(book);
+                }
             })
             .catch(err => {
                 console.error("Pricebook load failed:", err);
             });
 
+        return () => {
+            active = false;
+        };
+
     }, []);
 
     return pricebook;
 }
+
 
 /* ----------------------------------------------------------
    PRICES
