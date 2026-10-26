@@ -403,7 +403,7 @@ export function drawInsertStockbridge(
 ) {
 
     const muntinWidth = 1 * scale;
-    const framePad = (1.33 + 0.5) * scale;
+    const framePad = 0.5 * scale;
 
     ctx.save();
 
@@ -649,7 +649,7 @@ export function drawInsertCascade(
 ) {
 
     const muntinWidth = 1 * scale;
-    const framePad = (1.33 + 0.5) * scale;
+    const framePad = 0.5 * scale;
 
     ctx.save();
 
