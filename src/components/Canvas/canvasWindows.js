@@ -88,10 +88,39 @@ export function drawWindowFrame(
     width,
     height,
     scale,
-    frameColor = "#FFFFFF"
+    frameColor = "#FFFFFF",
+    frameInsets
 ) {
 
     ctx.save();
+
+    if (frameInsets) {
+        ctx.fillStyle = frameColor;
+        ctx.fillRect(
+            x,
+            y,
+            width,
+            frameInsets.y
+        );
+        ctx.fillRect(
+            x,
+            y + height - frameInsets.y,
+            width,
+            frameInsets.y
+        );
+        ctx.fillRect(
+            x,
+            y + frameInsets.y,
+            frameInsets.x,
+            height - 2 * frameInsets.y
+        );
+        ctx.fillRect(
+            x + width - frameInsets.x,
+            y + frameInsets.y,
+            frameInsets.x,
+            height - 2 * frameInsets.y
+        );
+    }
 
     /* Outer outline */
 
@@ -126,14 +155,39 @@ export function drawWindowFrame(
     const innerThickness =
         thickness - 0.505 * scale;
 
+    const shadowInsetX =
+        frameInsets ? frameInsets.x : innerThickness;
+    const shadowInsetY =
+        frameInsets ? frameInsets.y : innerThickness;
+
     ctx.lineWidth = innerThickness / 2;
 
     ctx.strokeRect(
-        x + innerThickness,
-        y + innerThickness,
-        width - innerThickness * 2,
-        height - innerThickness * 2
+        x + shadowInsetX,
+        y + shadowInsetY,
+        width - 2 * shadowInsetX,
+        height - 2 * shadowInsetY
     );
+
+    if (frameInsets) {
+        const innerLeft = x + frameInsets.x;
+        const innerRight = x + width - frameInsets.x;
+        const innerTop = y + frameInsets.y;
+        const innerBottom = y + height - frameInsets.y;
+
+        ctx.beginPath();
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.11)";
+        ctx.lineWidth = 1;
+        ctx.moveTo(x, y);
+        ctx.lineTo(innerLeft, innerTop);
+        ctx.moveTo(x + width, y);
+        ctx.lineTo(innerRight, innerTop);
+        ctx.moveTo(x, y + height);
+        ctx.lineTo(innerLeft, innerBottom);
+        ctx.moveTo(x + width, y + height);
+        ctx.lineTo(innerRight, innerBottom);
+        ctx.stroke();
+    }
 
     /* Bevel */
 
@@ -260,7 +314,7 @@ export function drawInsertStockton(
 ) {
 
     const muntinWidth = 1 * scale;
-    const framePad = (1.33 + 0.5) * scale;
+    const framePad = 0.5 * scale;
 
     ctx.save();
 
@@ -428,7 +482,7 @@ export function drawInsertWaterton(
 ) {
 
     const muntinWidth = 1 * scale;
-    const framePad = (1.33 + 0.5) * scale;
+    const framePad = 0.5 * scale;
 
     ctx.save();
 
@@ -526,7 +580,7 @@ export function drawInsertPrairie(
 ) {
 
     const muntinWidth = 1 * scale;
-    const framePad = (1.33 + 0.5) * scale;
+    const framePad = 0.5 * scale;
 
     ctx.save();
 
@@ -799,6 +853,10 @@ export function drawWindows(
         : (glassInsert || "");
 
     const drawInsert = INSERT_DRAWERS[insertKey];
+    const glassDimensions = {
+        colonial: { width: 16.770, height: 11.590 },
+        ranch: { width: 39.67, height: 11.63 }
+    };
 
     for (const section of sections) {
 
@@ -814,6 +872,21 @@ export function drawWindows(
         section.positions.forEach((pos, index) => {
 
             const winX = pos * scale + xpos;
+            const dimensions = glassDimensions[section.shape];
+            const glassW = dimensions
+                ? dimensions.width * scale
+                : winW - 0.5 * scale;
+            const glassH = dimensions
+                ? dimensions.height * scale
+                : winH - 0.5 * scale;
+            const frameInsets = dimensions
+                ? {
+                    x: (winW - glassW) / 2,
+                    y: (winH - glassH) / 2
+                }
+                : undefined;
+            const glassX = winX + (winW - glassW) / 2;
+            const glassY = winY + (winH - glassH) / 2;
 
             const isVisible =
                 section.enabled[index] === true;
@@ -824,10 +897,10 @@ export function drawWindows(
 
                 drawWindowGlass(
                     ctx,
-                    winX,
-                    winY,
-                    winW,
-                    winH
+                    glassX,
+                    glassY,
+                    glassW,
+                    glassH
                 );
 
                 /* 2. Insert */
@@ -836,10 +909,10 @@ export function drawWindows(
 
                     drawInsert(
                         ctx,
-                        winX,
-                        winY,
-                        winW,
-                        winH,
+                        glassX,
+                        glassY,
+                        glassW,
+                        glassH,
                         scale,
                         insertColor,
                         index
@@ -855,7 +928,8 @@ export function drawWindows(
                     winW,
                     winH,
                     scale,
-                    frameColor
+                    frameColor,
+                    frameInsets
                 );
             }
 
