@@ -7,7 +7,7 @@ function DoorModel({
 
     return (
 
-        <div className="configurator-section">
+        <div className="configurator-section landmark-section">
 
             <div className="landmark-section-header">
                 Door Model

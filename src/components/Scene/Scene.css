@@ -1,0 +1,545 @@
+/* ==========================================================
+   Scene.css
+   Scene backgrounds + Adjust scene panel + upload marker.
+   Scoped to #react-root (beats cobalt.css + the global
+   "#react-root button" reset in Configurator.css).
+   Selectors use one extra class where they must win over
+   Configurator.css (it is loaded after this file).
+========================================================== */
+
+
+/* ==========================================
+   1. SCENE BACKGROUNDS
+========================================== */
+
+/* ---------- None: old grey gradient ---------- */
+
+#react-root .canvas-area.house-scene.plain {
+    background: radial-gradient(circle,
+            rgba(255, 255, 255, 1) 0%,
+            rgba(180, 180, 180, 1) 100%);
+}
+
+#react-root .canvas-area.house-scene.plain.night {
+    background: radial-gradient(circle,
+            rgba(70, 78, 100, 1) 0%,
+            rgba(14, 20, 38, 1) 100%);
+}
+
+/* ---------- Landmark + customer photo: door stretched to the opening ---------- */
+
+#react-root .house-scene__stage.stretch .door-canvas-wrapper {
+    width: 100%;
+    height: 100%;
+}
+
+#react-root .house-scene__stage.stretch .door-canvas-wrapper canvas {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+}
+
+/* Customer photo is a <canvas> (CSP) – same look as the <img> */
+#react-root canvas.house-scene__image {
+    display: block;
+}
+
+
+/* ==========================================
+   2. ADJUST SCENE (bottom-left)
+========================================== */
+
+#react-root .scene-controls {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    z-index: 42;
+    max-height: calc(100% - 32px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+#react-root .scene-controls__file {
+    display: none;
+}
+
+#react-root button.scene-controls__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 14px;
+    background: #fff;
+    color: #222;
+    border: 1px solid #D9D9D9;
+    border-radius: 999px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#react-root button.scene-controls__toggle svg {
+    font-size: 18px;
+}
+
+#react-root button.scene-controls__toggle:hover {
+    background: #E4E4E4;
+}
+
+#react-root .scene-controls__panel {
+    width: 330px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 14px 16px 16px;
+    background: #fff;
+    border: 1px solid #e3e4e5;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+#react-root .scene-controls__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+#react-root .scene-controls__heading {
+    font-size: 15px;
+    font-weight: 700;
+    color: #010205;
+}
+
+#react-root button.scene-controls__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: #666;
+    cursor: pointer;
+}
+
+#react-root button.scene-controls__close svg {
+    font-size: 18px;
+}
+
+#react-root button.scene-controls__close:hover {
+    background: #E4E4E4;
+    color: #000;
+}
+
+#react-root .scene-controls__label {
+    margin: 10px 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+}
+
+/* ---------- Background thumbnails ---------- */
+
+#react-root .scene-controls__thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 8px;
+}
+
+#react-root .scene-controls__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+#react-root .scene-controls__caption {
+    font-size: 11px;
+    font-weight: 600;
+    color: #333;
+}
+
+#react-root button.scene-controls__thumb {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 66px;
+    height: 48px;
+    padding: 0;
+    overflow: hidden;
+    background: #fff;
+    color: #333;
+    border: 1px solid #999;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+
+/* <img> for Landmark, <canvas> for the customer photo */
+#react-root button.scene-controls__thumb img,
+#react-root button.scene-controls__thumb canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}
+
+#react-root button.scene-controls__thumb:hover:not(:disabled) {
+    border-color: #333;
+}
+
+#react-root button.scene-controls__thumb.active {
+    border: 2px solid #333;
+}
+
+/* None = grey gradient swatch */
+#react-root button.scene-controls__thumb.none {
+    background: radial-gradient(circle,
+            rgba(255, 255, 255, 1) 0%,
+            rgba(180, 180, 180, 1) 100%);
+}
+
+/* Disabled (Landmark with custom dimension) */
+#react-root button.scene-controls__thumb:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+#react-root .scene-controls__check {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #000;
+    color: #fff;
+}
+
+#react-root .scene-controls__check svg {
+    font-size: 12px;
+}
+
+/* Upload tile */
+#react-root button.scene-controls__thumb.upload {
+    border-style: dashed;
+    background: #fafafa;
+}
+
+#react-root button.scene-controls__thumb.upload svg {
+    font-size: 22px;
+}
+
+#react-root button.scene-controls__thumb.upload:hover:not(:disabled) {
+    background: #E4E4E4;
+}
+
+#react-root button.scene-controls__thumb.upload:disabled {
+    opacity: .6;
+    cursor: wait;
+}
+
+#react-root .scene-controls__hint {
+    margin-top: 8px;
+    font-size: 11px;
+    line-height: 1.4;
+    color: #6b6d70;
+}
+
+/* ---------- Re-mark / Remove ---------- */
+
+#react-root .scene-controls__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-top: 8px;
+}
+
+#react-root button.scene-controls__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    color: #222;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+#react-root button.scene-controls__link svg {
+    font-size: 16px;
+}
+
+#react-root button.scene-controls__link:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+/* ---------- Day / Night (same colours as option buttons) ---------- */
+
+#react-root .scene-controls__segment {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+#react-root button.scene-controls__option {
+    height: 34px;
+    background: #fff;
+    color: #222;
+    border: 1px solid #999;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+
+#react-root button.scene-controls__option:hover {
+    background: #E4E4E4;
+}
+
+#react-root button.scene-controls__option.active,
+#react-root button.scene-controls__option.active:hover {
+    background: #D9D9D9;
+    border: 1px solid #333;
+    font-weight: 700;
+}
+
+/* ---------- Messages ---------- */
+
+#react-root .scene-controls__message,
+#react-root .scene-controls__toast {
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #fdecec;
+    color: #9f101b;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+#react-root .scene-controls__message {
+    margin-top: 12px;
+}
+
+#react-root .scene-controls__toast {
+    max-width: 300px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+#react-root .scene-controls__note {
+    margin-top: 12px;
+    font-size: 11px;
+    line-height: 1.4;
+    color: #6b6d70;
+}
+
+
+/* ==========================================
+   3. MARK YOUR GARAGE DOOR (full-screen dialog)
+   Rendered on <body> (portal) with id="rw-photo-marker-root",
+   so it is styled with that id – NOT #react-root.
+   ConfigureOne has "* { position: relative; margin: 0; ... }",
+   so position / box-sizing are set explicitly here.
+========================================== */
+
+#rw-photo-marker-root,
+#rw-photo-marker-root * {
+    box-sizing: border-box;
+}
+
+#rw-photo-marker-root.home-photo-marker {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.6);
+    font-family: Karla, Arial, sans-serif;
+}
+
+/* Fixed height = window height -> photo fits, no scroll bar */
+#rw-photo-marker-root .home-photo-marker__panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(1100px, 100%);
+    height: min(820px, 100%);
+    overflow: hidden;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+#rw-photo-marker-root .home-photo-marker__header {
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 22px 12px;
+}
+
+#rw-photo-marker-root .home-photo-marker__title {
+    margin: 0 0 4px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #010205;
+}
+
+#rw-photo-marker-root .home-photo-marker__hint {
+    margin: 0;
+    font-size: 14px;
+    color: #6b6d70;
+}
+
+/* Stage takes the remaining height; photo is fitted inside by JS */
+#rw-photo-marker-root .home-photo-marker__stage {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: #f2f2f2;
+    overflow: hidden;
+}
+
+#rw-photo-marker-root .home-photo-marker__image-wrap {
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+    line-height: 0;
+    cursor: crosshair;
+    touch-action: none;
+    user-select: none;
+}
+
+/* Photo canvas fills the fitted wrap exactly */
+#rw-photo-marker-root .home-photo-marker__image {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Marked box – outside of it is darkened */
+#rw-photo-marker-root .home-photo-marker__box {
+    position: absolute;
+    border: 2px solid #e21f2e;
+    background: rgba(226, 31, 46, 0.12);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+}
+
+#rw-photo-marker-root .home-photo-marker__footer {
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 22px 16px;
+    border-top: 1px solid #eeeeee;
+}
+
+#rw-photo-marker-root .home-photo-marker__footer-right {
+    display: flex;
+    gap: 10px;
+}
+
+/* Buttons (outside #react-root – no global reset, so set everything) */
+#rw-photo-marker-root button {
+    margin: 0;
+    font-family: inherit;
+    line-height: normal;
+    text-transform: none;
+    letter-spacing: normal;
+    box-shadow: none;
+}
+
+#rw-photo-marker-root button.home-photo-marker__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    padding: 0;
+    background: transparent;
+    color: #333;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+#rw-photo-marker-root button.home-photo-marker__close svg {
+    font-size: 22px;
+}
+
+#rw-photo-marker-root button.home-photo-marker__close:hover {
+    background: #E4E4E4;
+}
+
+#rw-photo-marker-root button.home-photo-marker__button {
+    height: 42px;
+    min-width: 100px;
+    padding: 0 20px;
+    background: #fff;
+    color: #222;
+    border: 1px solid #999;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#rw-photo-marker-root button.home-photo-marker__button:hover:not(:disabled) {
+    background: #E4E4E4;
+}
+
+#rw-photo-marker-root button.home-photo-marker__button.primary {
+    background: #010205;
+    color: #fff;
+    border-color: #010205;
+}
+
+#rw-photo-marker-root button.home-photo-marker__button.primary:hover:not(:disabled) {
+    background: #323639;
+}
+
+#rw-photo-marker-root button.home-photo-marker__button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+
+    #react-root .scene-controls__panel {
+        width: 280px;
+    }
+
+    #rw-photo-marker-root.home-photo-marker {
+        padding: 10px;
+    }
+
+    #rw-photo-marker-root .home-photo-marker__footer {
+        flex-wrap: wrap;
+    }
+}

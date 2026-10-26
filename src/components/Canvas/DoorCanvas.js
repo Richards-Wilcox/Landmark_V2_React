@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+    MdZoomIn,
+    MdZoomOut,
+    MdRefresh
+} from "react-icons/md";
 
 import {
     availableColors,
@@ -42,6 +47,12 @@ import SlimSectionEditor from "./SlimSectionEditor";
 const CANVAS_WIDTH = 900;
 const CANVAS_HEIGHT = 700;
 
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 3;
+const ZOOM_STEP = 0.25;
+
+
+
 function DoorCanvas({
     doorModel,
     panelStyle,
@@ -50,6 +61,10 @@ function DoorCanvas({
     height,
 
     numOfSections,
+
+    // NUM_OF_PANELS / NUM_OF_WINDOWS (default or special value)
+    numOfPanels,
+    numOfWindows,
 
     selectedColor,
     finish,
@@ -73,8 +88,198 @@ function DoorCanvas({
 }) {
 
     const canvasRef = useRef(null);
+    /* ==========================================
+       ZOOM + PAN
+    ========================================== */
+
+    const viewportRef = useRef(null);
+    const dragRef = useRef(null);
+    const movedRef = useRef(false);
+
+    const [zoom, setZoom] = useState(1);
+    const [pan, setPan] = useState({ x: 0, y: 0 });
+    // Latest values for the native wheel listener
+    const zoomRef = useRef(zoom);
+    const panRef = useRef(pan);
+
+    zoomRef.current = zoom;
+    panRef.current = pan;
+
+
+    // Back at 100%: re-center
+    useEffect(() => {
+        if (zoom === 1) {
+            setPan({ x: 0, y: 0 });
+        }
+    }, [zoom]);
+
+    const clampPan = (x, y, z = zoom) => {
+
+        const viewport = viewportRef.current;
+
+        if (!viewport) {
+            return { x, y };
+        }
+
+        const maxX = (viewport.clientWidth * (z - 1)) / 2;
+        const maxY = (viewport.clientHeight * (z - 1)) / 2;
+
+        return {
+            x: Math.max(-maxX, Math.min(maxX, x)),
+            y: Math.max(-maxY, Math.min(maxY, y))
+        };
+    };
+
+    const handleZoomIn = () => {
+        setZoom(z => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)));
+    };
+
+    const handleZoomOut = () => {
+        setZoom(z => {
+            const next = Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2));
+            setPan(p => clampPan(p.x, p.y, next));
+            return next;
+        });
+    };
+
+    const handleZoomReset = () => {
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
+    };
+
+    const handlePointerDown = (event) => {
+
+        if (zoom <= 1) {
+            return;
+        }
+
+        // Don't start a drag from the pencil / menu / zoom buttons
+        if (
+            event.target.closest(
+                ".slim-pencil-button, .slim-options-container, .canvas-zoom-controls"
+            )
+        ) {
+            return;
+        }
+
+        movedRef.current = false;
+
+        dragRef.current = {
+            startX: event.clientX,
+            startY: event.clientY,
+            panX: pan.x,
+            panY: pan.y
+        };
+
+        event.currentTarget.setPointerCapture(event.pointerId);
+    };
+
+    const handlePointerMove = (event) => {
+
+        const drag = dragRef.current;
+
+        if (!drag) {
+            return;
+        }
+
+        const dx = event.clientX - drag.startX;
+        const dy = event.clientY - drag.startY;
+
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+            movedRef.current = true;
+        }
+
+        setPan(clampPan(drag.panX + dx, drag.panY + dy));
+    };
+
+    const handlePointerUp = (event) => {
+
+        dragRef.current = null;
+
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+    };
+
+    /* ==========================================
+       MOUSE WHEEL ZOOM (zooms toward the cursor)
+    ========================================== */
+
+    useEffect(() => {
+
+        const viewport = viewportRef.current;
+
+        if (!viewport) {
+            return;
+        }
+
+        const handleWheel = (event) => {
+
+            // Let the slim menu and zoom controls behave normally
+            if (
+                event.target.closest(
+                    ".slim-options-container, .canvas-zoom-controls"
+                )
+            ) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const current = zoomRef.current;
+
+            // Smooth zoom: works for both mouse wheels and trackpads
+            const next = Math.min(
+                MAX_ZOOM,
+                Math.max(
+                    MIN_ZOOM,
+                    +(current * Math.exp(-event.deltaY * 0.0015)).toFixed(2)
+                )
+            );
+
+            if (next === current) {
+                return;
+            }
+
+            /* Keep the point under the cursor in place */
+
+            const rect = viewport.getBoundingClientRect();
+
+            const cursorX = event.clientX - rect.left - rect.width / 2;
+            const cursorY = event.clientY - rect.top - rect.height / 2;
+
+            const ratio = next / current;
+
+            const p = panRef.current;
+
+            let x = cursorX - (cursorX - p.x) * ratio;
+            let y = cursorY - (cursorY - p.y) * ratio;
+
+            /* Keep the door inside the viewport */
+
+            const maxX = (viewport.clientWidth * (next - 1)) / 2;
+            const maxY = (viewport.clientHeight * (next - 1)) / 2;
+
+            x = Math.max(-maxX, Math.min(maxX, x));
+            y = Math.max(-maxY, Math.min(maxY, y));
+
+            setZoom(next);
+            setPan({ x, y });
+        };
+
+        viewport.addEventListener("wheel", handleWheel, { passive: false });
+
+        return () => {
+            viewport.removeEventListener("wheel", handleWheel);
+        };
+
+    }, []);
 
     const shape = glassShape || "";
+
+    // Numbers used by getPanelPositions special check
+    const selectedPanels = Number(numOfPanels) || 0;
+    const selectedWindows = Number(numOfWindows) || 0;
 
     /* ==========================================
        SHARED LAYOUT (used by drawing AND clicking)
@@ -113,7 +318,9 @@ function DoorCanvas({
             windowPosition,
             customWindows,
             slimSections,
-            selectedSlimSection
+            selectedSlimSection,
+            numOfPanels: selectedPanels,
+            numOfWindows: selectedWindows
         });
 
         return {
@@ -136,7 +343,9 @@ function DoorCanvas({
         windowPosition,
         customWindows,
         slimSections,
-        selectedSlimSection
+        selectedSlimSection,
+        selectedPanels,
+        selectedWindows
     ]);
 
     const hintsVisible = getHintsVisible({
@@ -345,12 +554,16 @@ function DoorCanvas({
                 const dimensions =
                     getPanelDimensions(panelType);
 
+                // NUM_OF_PANELS special value changes the
+                // punch count + spacing (original getPanelPositions)
                 const defaultPositions =
                     getPanelPositions({
                         panelType,
                         doorWidth: width,
                         face: panelStyle,
-                        glassShape: ""
+                        glassShape: shape,
+                        selectedPanels,
+                        selectedWindows
                     });
 
                 for (
@@ -543,7 +756,10 @@ function DoorCanvas({
         glassInsert,
 
         windowPosition,
-        hintsVisible
+        hintsVisible,
+
+        selectedPanels,
+        selectedWindows
     ]);
 
     /* ==========================================
@@ -551,6 +767,12 @@ function DoorCanvas({
     ========================================== */
 
     const handleCanvasClick = (event) => {
+
+        // Ignore the click that ends a drag (pan while zoomed).
+        if (movedRef.current) {
+            movedRef.current = false;
+            return;
+        }
 
         if (!canSelectWindows || !onWindowsChange) {
             return;
@@ -662,35 +884,93 @@ function DoorCanvas({
                 : "default";
 
     return (
-        <div className="door-canvas-wrapper">
+        <div
+            ref={viewportRef}
+            className={
+                zoom > 1
+                    ? "door-canvas-viewport zoomed"
+                    : "door-canvas-viewport"
+            }
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+        >
 
-            <canvas
-                ref={canvasRef}
-                id="CONFIG_CANVAS"
-                width={CANVAS_WIDTH}
-                height={CANVAS_HEIGHT}
-                style={{ cursor }}
-                onClick={handleCanvasClick}
-            />
+            <div
+                className="door-canvas-wrapper"
+                style={{
+                    transform:
+                        `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`
+                }}
+            >
 
-            {showSlimEditor && (
-                <SlimSectionEditor
-                    sections={layout.windowSections}
-
-                    scale={layout.scale}
-                    doorX={layout.doorX}
-                    doorY={layout.doorY}
-                    doorWidth={layout.doorWidth}
-                    doorHeight={layout.doorHeight}
-
-                    canvasWidth={CANVAS_WIDTH}
-                    canvasHeight={CANVAS_HEIGHT}
-
-                    selectedSection={selectedSlimSection}
-                    onSelectSection={onSelectSlimSection}
-                    onSectionChange={onSlimSectionChange}
+                <canvas
+                    ref={canvasRef}
+                    id="CONFIG_CANVAS"
+                    width={CANVAS_WIDTH}
+                    height={CANVAS_HEIGHT}
+                    style={{ cursor }}
+                    onClick={handleCanvasClick}
                 />
-            )}
+
+                {showSlimEditor && (
+                    <SlimSectionEditor
+                        sections={layout.windowSections}
+
+                        scale={layout.scale}
+                        doorX={layout.doorX}
+                        doorY={layout.doorY}
+                        doorWidth={layout.doorWidth}
+                        doorHeight={layout.doorHeight}
+
+                        canvasWidth={CANVAS_WIDTH}
+                        canvasHeight={CANVAS_HEIGHT}
+
+                        selectedSection={selectedSlimSection}
+                        onSelectSection={onSelectSlimSection}
+                        onSectionChange={onSlimSectionChange}
+                    />
+                )}
+
+            </div>
+
+            {/* Zoom controls (not scaled) */}
+
+            <div className="canvas-zoom-controls">
+
+                <button
+                    type="button"
+                    aria-label="Zoom in"
+                    disabled={zoom >= MAX_ZOOM}
+                    onClick={handleZoomIn}
+                >
+                    <MdZoomIn />
+                </button>
+
+                <span className="canvas-zoom-value">
+                    {Math.round(zoom * 100)}%
+                </span>
+
+                <button
+                    type="button"
+                    aria-label="Zoom out"
+                    disabled={zoom <= MIN_ZOOM}
+                    onClick={handleZoomOut}
+                >
+                    <MdZoomOut />
+                </button>
+
+                <button
+                    type="button"
+                    aria-label="Reset zoom"
+                    disabled={zoom === 1}
+                    onClick={handleZoomReset}
+                >
+                    <MdRefresh />
+                </button>
+
+            </div>
 
         </div>
     );
