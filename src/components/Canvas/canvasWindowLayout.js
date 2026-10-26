@@ -465,6 +465,11 @@ export function getEnabledWindows(
 /* ==========================================
    BUILD WINDOW SECTIONS (original WINDOW_STATE)
    Sections are ordered TOP -> BOTTOM
+
+   numOfPanels / numOfWindows = NUM_OF_PANELS / NUM_OF_WINDOWS.
+   When the special value is selected, getPanelPositions
+   switches to rule.special (qty + mutt spacing), exactly
+   like the original getPanelPositions().
 ========================================== */
 
 export function buildWindowSections({
@@ -478,7 +483,9 @@ export function buildWindowSections({
     customWindows = [],
     slimSections = [],
     selectedSlimSection = null,
-    singleEndcap = true
+    singleEndcap = true,
+    numOfPanels = 0,
+    numOfWindows = 0
 }) {
 
     if (!glassShape) {
@@ -491,6 +498,9 @@ export function buildWindowSections({
     const isGrand = glassShape.includes("grand");
     const isSlim = glassShape.includes("slim");
     const special = isSpecialFace(panelStyle, glassShape);
+
+    const selectedPanels = Number(numOfPanels) || 0;
+    const selectedWindows = Number(numOfWindows) || 0;
 
     // Grand and special faces are always forced to TOP
 
@@ -518,6 +528,8 @@ export function buildWindowSections({
             doorWidth: width,
             face: panelStyle,
             glassShape,
+            selectedPanels,
+            selectedWindows,
             special: useSpecial
         });
     };
@@ -617,6 +629,11 @@ export function buildWindowSections({
         } else {
 
             /* -------- Normal -------- */
+
+            // Saved custom windows are kept only while the
+            // window count is unchanged; switching NUM_OF_PANELS /
+            // NUM_OF_WINDOWS changes the count, so the position
+            // defaults are re-applied (original WINDOW_STATE).
 
             positions = getPositions(shape, false);
 

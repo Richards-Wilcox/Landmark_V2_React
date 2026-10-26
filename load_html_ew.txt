@@ -1,0 +1,130 @@
+/* ==========================================================
+   LOAD_HTML.js (React version)
+
+   The configurator UI is now built in React.
+   This file only:
+     1. Hides the EW accordions (inputs stay on the page)
+     2. Hides the ConfigureOne header / footer buttons
+     3. Creates the React mount point
+     4. Loads the React build files (main.js + main.css)
+
+   The old jQuery form (createForm, loadUI, rw_init,
+   applyDefaults, populateCarousel, ...) is no longer used.
+========================================================== */
+
+/* ==========================================
+   REACT BUILD FILES
+   Update the file names after every build
+========================================== */
+
+const REACT_PATH = "/HTML/products/162059085/jscripts/";
+
+const REACT_FILES = {
+    css: "main.css",
+    js: "main.js"
+};
+
+/* ==========================================
+   HIDE EW ACCORDIONS
+   Inputs stay in the DOM so React can write
+   values into them; they are just not visible.
+========================================== */
+
+function toggleAccordion() {
+
+    $("#ROOT_0").hide();
+    $("#accordion661524662").hide();   // TEST_UTIL
+    $("#accordion935516314").hide();   // LOAD_HTML
+    $("#accordion991246024").hide();   // Weight controller
+    $("#accordion1406547076").hide();  // Outputs
+    $("#accordion1094153584").hide();  // Global data for JDE
+    $("#accordion9757245").hide();     // Section bundle
+    $("#accordion321627220").hide();   // Glazing code
+    $("#accordion1892755284").hide();  // Scheduling code
+    $("#accordion51537489").hide();    // Price controller
+}
+
+/* ==========================================
+   HIDE CONFIGUREONE UI
+========================================== */
+
+function hideConfigureOneUi() {
+
+    $("#ui-info").hide();          // header
+    $(".bottom-buttons").hide();   // footer buttons
+    $(".button-set.right").hide();
+}
+
+/* ==========================================
+   REACT MOUNT POINT
+   React looks for #root, then #react-root
+========================================== */
+
+function createReactRoot() {
+
+    if ($("#react-root").length) {
+        return;
+    }
+
+    const $container = $(".concept-ui-form.scrollable");
+
+    const html =
+        '<div id="react-root" class="react-root landmark-app"></div>';
+
+    if ($container.length) {
+        $container.append(html);
+    } else {
+        $("body").append(html);
+    }
+}
+
+/* ==========================================
+   LOAD REACT BUILD
+========================================== */
+
+function loadReactBuild() {
+
+    // Load once only
+    if (window.__REACT_LOADED__) {
+        return;
+    }
+
+    window.__REACT_LOADED__ = true;
+
+    // CSS
+    $("<link>", {
+        rel: "stylesheet",
+        href: REACT_PATH + REACT_FILES.css
+    }).appendTo("head");
+
+    // JS
+    const script = document.createElement("script");
+
+    script.src = REACT_PATH + REACT_FILES.js;
+
+    script.onload = function () {
+        console.log("React build loaded:", script.src);
+    };
+
+    script.onerror = function () {
+        window.__REACT_LOADED__ = false;
+        console.error("React build not found:", script.src);
+    };
+
+    document.body.appendChild(script);
+}
+
+/* ==========================================
+   ENTRY POINT (called by ConfigureOne)
+========================================== */
+
+function loadForm() {
+
+    toggleAccordion();
+
+    hideConfigureOneUi();
+
+    createReactRoot();
+
+    loadReactBuild();
+}

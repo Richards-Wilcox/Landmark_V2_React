@@ -1,0 +1,180 @@
+/* ==========================================================
+   WallColorPicker.css
+   Styles for WallColorPicker.js (imported by the component).
+   Scoped to #react-root so cobalt.css cannot override them.
+   ConfigureOne sets "* { position: relative; margin: 0;
+   background: transparent; ... }", so position / sizing /
+   backgrounds are set explicitly here.
+========================================================== */
+
+#react-root .wall-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+/* ---------- Square + hue (one rounded box) ---------- */
+
+#react-root .wall-picker__box {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+#react-root .wall-picker__sat {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 150px;
+    border-radius: 10px 10px 0 0;
+    background-image:
+        linear-gradient(to top, #000, rgba(0, 0, 0, 0)),
+        linear-gradient(to right, #fff, rgba(255, 255, 255, 0));
+    cursor: crosshair;
+    touch-action: none;
+    user-select: none;
+}
+
+#react-root .wall-picker__hue {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 22px;
+    border-radius: 0 0 10px 10px;
+    background-image: linear-gradient(to right,
+            #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%,
+            #00f 67%, #f0f 83%, #f00 100%);
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+}
+
+/* Round handle (white ring + shadow) */
+#react-root .wall-picker__pointer {
+    position: absolute !important;
+    z-index: 2;
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    box-sizing: border-box;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+#react-root .wall-picker__pointer.hue {
+    top: 50%;
+    width: 24px;
+    height: 24px;
+}
+
+/* ---------- Preview + hex + reset ---------- */
+
+#react-root .wall-picker__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+#react-root .wall-picker__preview {
+    display: block;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+
+/* Default = grey gradient */
+#react-root .wall-picker__preview.default {
+    background-image: radial-gradient(circle,
+            rgba(255, 255, 255, 1) 0%,
+            rgba(180, 180, 180, 1) 100%);
+}
+
+/* "# ______" field */
+#react-root .wall-picker__hex-field {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid #999;
+    border-radius: 8px;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+#react-root .wall-picker__hex-field:focus-within {
+    border-color: #333;
+}
+
+#react-root .wall-picker__hash {
+    flex-shrink: 0;
+    margin-right: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+}
+
+/* Remove ConfigureOne's blue input border / focus ring */
+#react-root input.wall-picker__hex {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: none !important;
+    outline: none !important;
+    background: transparent;
+    box-shadow: none !important;
+    color: #222;
+    font-size: 13px;
+    font-family: inherit;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+#react-root input.wall-picker__hex::placeholder {
+    color: #999;
+    text-transform: none;
+}
+
+#react-root button.wall-picker__reset {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    height: 32px;
+    padding: 0 10px;
+    background: #fff;
+    color: #222;
+    border: 1px solid #999;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+#react-root button.wall-picker__reset svg {
+    font-size: 16px;
+}
+
+#react-root button.wall-picker__reset:hover:not(:disabled) {
+    background: #E4E4E4;
+}
+
+#react-root button.wall-picker__reset:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
