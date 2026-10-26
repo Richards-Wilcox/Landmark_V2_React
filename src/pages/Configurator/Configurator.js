@@ -25,7 +25,7 @@ import {
     getConfigSerial
 } from "../../components/Scene/homePhoto";
 
-import { getDoorInfo } from "../../components/Canvas/doorInfo";
+import { getDoorInfo, getJsonObj } from "../../components/Canvas/doorInfo";
 
 import {
     getDefaultSlimSection,
@@ -62,6 +62,9 @@ import {
     DESIGN_PATTERNS
 } from "../../ew/ewAttributes";
 
+
+import { getDrivenValues } from "../../ew/drivenValues";
+
 import {
     MdBookmarkBorder,
     MdRestore,
@@ -92,61 +95,417 @@ const SIZE_MAP = {
     "5": { width: 16, height: 8 }
 };
 
-/* ---------- Landmark scenes (one photo per standard size) ----------
-   Each photo (1536 x 1024) has a plain white garage door with the
-   same proportions as that door size. The drawn door is stretched
-   into the measured opening, so it always fits the photo exactly.
-   opening = garage door area inside the photo (image px)
-   lights  = wall lanterns (image px) – glow in Night view
-   Custom dimension -> no photo, grey gradient only. */
 
-const IMAGE_PATH = "/HTML/products/162059085/images/";
+/* ==========================================================
+   LANDMARK HOUSE SCENES
 
-const makeLandmarkScene = (sizeId, file, opening, lights) => ({
-    id: `landmark-${sizeId}`,
-    url: `${IMAGE_PATH}${file}`,
-    width: 1536,
-    height: 1024,
+   Door models:
+   A = Classic L138      -> Classic house   (1536 x 1024 images)
+   D = Premium L200      -> Contemporary    (1440 x 908 images)
+   G = Grandview L200GV  -> Classic house (until its own set exists)
+
+   Standard sizes (SIZE_MAP keys):
+   0 = 8x7
+   1 = 9x7
+   2 = 16x7
+   3 = 8x8
+   4 = 9x8
+   5 = 16x8
+
+   Every house has ONE image per standard size. The garage
+   door in each image is a plain door area of that size, and
+   the React door is stretched to fill it.
+
+   width / height : image size in pixels (differs per house)
+   opening        : garage door area inside the image (image px)
+   lights         : optional wall-light spots for the night glow
+========================================================== */
+
+const IMAGE_PATH =
+    "/HTML/products/162059085/images/";
+
+/* ----------------------------------------------------------
+   Shared scene builder
+---------------------------------------------------------- */
+
+const makeLandmarkScene = ({
+    id,
+    file,
     opening,
+    lights = [],
+
+    // Classic images are 1536 x 1024
+    width = 1536,
+    height = 1024
+}) => ({
+    id,
+
+    url: `${IMAGE_PATH}${file}`,
+
+    width,
+    height,
+
+    opening,
+
     safeArea: {
-        left: Math.max(0, opening.x - 70),
-        right: opening.x + opening.width + 70
+        left: Math.max(
+            0,
+            opening.x - 70
+        ),
+
+        right:
+            opening.x +
+            opening.width +
+            70
     },
+
     lights,
+
+    // The door fills the opening exactly
     stretch: true
 });
 
-// Keys = SIZE_MAP keys (doorSize)
-const LANDMARK_SCENES = {
-    "0": makeLandmarkScene("8x7", "Landmark_8x7.jpg",
-        { x: 223, y: 540, width: 284, height: 244 },
-        [{ x: 167, y: 567 }, { x: 560, y: 567 }]),
+/* ==========================================================
+   CLASSIC L138
+   Door model A
+========================================================== */
 
-    "1": makeLandmarkScene("9x7", "Landmark_9x7.jpg",
-        { x: 236, y: 555, width: 298, height: 243 },
-        [{ x: 185, y: 575 }, { x: 578, y: 575 }]),
+const CLASSIC_LANDMARK_SCENES = {
 
-    "2": makeLandmarkScene("16x7", "Landmark_16x7.jpg",
-        { x: 149, y: 549, width: 520, height: 220 },
-        [{ x: 105, y: 570 }, { x: 710, y: 570 }]),
+    /* ---------- 8x7 ---------- */
 
-    "3": makeLandmarkScene("8x8", "Landmark_8x8.jpg",
-        { x: 177, y: 561, width: 278, height: 253 },
-        [{ x: 118, y: 595 }, { x: 508, y: 595 }]),
+    "0": makeLandmarkScene({
+        id: "classic-8x7",
 
-    "4": makeLandmarkScene("9x8", "Landmark_9x8.jpg",
-        { x: 215, y: 537, width: 290, height: 259 },
-        [{ x: 142, y: 562 }, { x: 570, y: 562 }]),
+        file:
+            "Landmark_8x7.jpg",
 
-    "5": makeLandmarkScene("16x8", "Landmark_16x8.jpg",
-        { x: 155, y: 552, width: 496, height: 226 },
-        [{ x: 105, y: 570 }, { x: 698, y: 568 }])
+        opening: {
+            x: 223,
+            y: 540,
+            width: 284,
+            height: 244
+        },
+
+        lights: [
+            {
+                x: 167,
+                y: 567
+            },
+            {
+                x: 560,
+                y: 567
+            }
+        ]
+    }),
+
+    /* ---------- 9x7 ---------- */
+
+    "1": makeLandmarkScene({
+        id: "classic-9x7",
+
+        file:
+            "Landmark_9x7.jpg",
+
+        opening: {
+            x: 236,
+            y: 555,
+            width: 298,
+            height: 243
+        },
+
+        lights: [
+            {
+                x: 185,
+                y: 575
+            },
+            {
+                x: 578,
+                y: 575
+            }
+        ]
+    }),
+
+    /* ---------- 16x7 ---------- */
+
+    "2": makeLandmarkScene({
+        id: "classic-16x7",
+
+        file:
+            "Landmark_16x7.jpg",
+
+        opening: {
+            x: 149,
+            y: 549,
+            width: 520,
+            height: 220
+        },
+
+        lights: [
+            {
+                x: 105,
+                y: 570
+            },
+            {
+                x: 710,
+                y: 570
+            }
+        ]
+    }),
+
+    /* ---------- 8x8 ---------- */
+
+    "3": makeLandmarkScene({
+        id: "classic-8x8",
+
+        file:
+            "Landmark_8x8.jpg",
+
+        opening: {
+            x: 177,
+            y: 561,
+            width: 278,
+            height: 253
+        },
+
+        lights: [
+            {
+                x: 118,
+                y: 595
+            },
+            {
+                x: 508,
+                y: 595
+            }
+        ]
+    }),
+
+    /* ---------- 9x8 ---------- */
+
+    "4": makeLandmarkScene({
+        id: "classic-9x8",
+
+        file:
+            "Landmark_9x8.jpg",
+
+        opening: {
+            x: 215,
+            y: 537,
+            width: 290,
+            height: 259
+        },
+
+        lights: [
+            {
+                x: 142,
+                y: 562
+            },
+            {
+                x: 570,
+                y: 562
+            }
+        ]
+    }),
+
+    /* ---------- 16x8 ---------- */
+
+    "5": makeLandmarkScene({
+        id: "classic-16x8",
+
+        file:
+            "Landmark_16x8.jpg",
+
+        opening: {
+            x: 155,
+            y: 552,
+            width: 496,
+            height: 226
+        },
+
+        lights: [
+            {
+                x: 105,
+                y: 570
+            },
+            {
+                x: 698,
+                y: 568
+            }
+        ]
+    })
 };
 
-const getLandmarkScene = (doorSize) =>
-    LANDMARK_SCENES[doorSize] || LANDMARK_SCENES["2"];
+/* ==========================================================
+   CONTEMPORARY
+   Premium L200
+   Door model D
 
-/* Customer photo 
+   Made from the original Landmark_Contemporary.jpg.
+   Image size: 1440 x 908.
+
+========================================================== */
+
+const CONTEMPORARY_IMAGE_SIZE = {
+    width: 1440,
+    height: 908
+};
+
+const CONTEMPORARY_LANDMARK_SCENES = {
+
+    // 8x7  (door 156 + jamb 8)
+    "0": makeLandmarkScene({
+        id: "contemporary-8x7",
+        file: "Landmark_Contemporary_8x7.jpg",
+        opening: { x: 385, y: 536, width: 164, height: 136 },
+        ...CONTEMPORARY_IMAGE_SIZE
+    }),
+
+    // 9x7  (door 176 + jamb 8)
+    "1": makeLandmarkScene({
+        id: "contemporary-9x7",
+        file: "Landmark_Contemporary_9x7.jpg",
+        opening: { x: 375, y: 536, width: 184, height: 136 },
+        ...CONTEMPORARY_IMAGE_SIZE
+    }),
+
+    // 16x7 (door 312 + jamb 8)
+    "2": makeLandmarkScene({
+        id: "contemporary-16x7",
+        file: "Landmark_Contemporary_16x7.jpg",
+        opening: { x: 307, y: 536, width: 320, height: 136 },
+        ...CONTEMPORARY_IMAGE_SIZE
+    }),
+
+    // 8x8  (door 156 + jamb 8)
+    "3": makeLandmarkScene({
+        id: "contemporary-8x8",
+        file: "Landmark_Contemporary_8x8.jpg",
+        opening: { x: 385, y: 516, width: 164, height: 156 },
+        ...CONTEMPORARY_IMAGE_SIZE
+    }),
+
+    // 9x8  (door 176 + jamb 8)
+    "4": makeLandmarkScene({
+        id: "contemporary-9x8",
+        file: "Landmark_Contemporary_9x8.jpg",
+        opening: { x: 375, y: 516, width: 184, height: 156 },
+        ...CONTEMPORARY_IMAGE_SIZE
+    }),
+
+    // 16x8 (door 312 + jamb 8)
+    "5": makeLandmarkScene({
+        id: "contemporary-16x8",
+        file: "Landmark_Contemporary_16x8.jpg",
+        opening: { x: 307, y: 516, width: 320, height: 156 },
+        ...CONTEMPORARY_IMAGE_SIZE
+    })
+};
+
+/* ==========================================================
+   GRANDVIEW
+   Grandview L200GV
+   Door model G
+
+   8x7 / 9x7 / 8x8 / 9x8 : single-car garage houses (1536 x 1024)
+   16x7 / 16x8           : made from Grandview_White.webp (1192 x 752)
+   Opening = the plain door area (white trim stays visible).
+   Lights  = the two wall lanterns beside the garage.
+========================================================== */
+
+const GRANDVIEW_LANDMARK_SCENES = {
+
+    // 8x7
+    "0": makeLandmarkScene({
+        id: "grandview-8x7",
+        file: "Landmark_Grandview_8x7.jpg",
+        opening: { x: 140, y: 562, width: 279, height: 244 },
+        lights: [{ x: 96, y: 608 }, { x: 510, y: 608 }]
+    }),
+
+    // 9x7
+    "1": makeLandmarkScene({
+        id: "grandview-9x7",
+        file: "Landmark_Grandview_9x7.jpg",
+        opening: { x: 201, y: 499, width: 350, height: 272 },
+        lights: [{ x: 140, y: 534 }, { x: 596, y: 534 }]
+    }),
+
+    // 16x7
+    "2": makeLandmarkScene({
+        id: "grandview-16x7",
+        file: "Landmark_Grandview_16x7.jpg",
+        opening: { x: 190, y: 553, width: 511, height: 223 },
+        lights: [{ x: 138, y: 578 }, { x: 744, y: 578 }]
+    }),
+
+    // 8x8
+    "3": makeLandmarkScene({
+        id: "grandview-8x8",
+        file: "Landmark_Grandview_8x8.jpg",
+        opening: { x: 227, y: 503, width: 275, height: 275 },
+        lights: [{ x: 174, y: 560 }, { x: 572, y: 560 }]
+    }),
+
+    // 9x8
+    "4": makeLandmarkScene({
+        id: "grandview-9x8",
+        file: "Landmark_Grandview_9x8.jpg",
+        opening: { x: 186, y: 565, width: 286, height: 254 },
+        lights: [{ x: 125, y: 605 }, { x: 565, y: 605 }]
+    }),
+
+    // 16x8
+    "5": makeLandmarkScene({
+        id: "grandview-16x8",
+        file: "Landmark_Grandview_16x8.jpg",
+        opening: { x: 152, y: 575, width: 465, height: 232 },
+        lights: [{ x: 103, y: 613 }, { x: 658, y: 613 }]
+    })
+};
+
+/* ==========================================================
+   SCENE MAP BY DOOR MODEL
+========================================================== */
+
+const LANDMARK_SCENES_BY_MODEL = {
+
+    // Classic L138
+    A: CLASSIC_LANDMARK_SCENES,
+
+    // Premium L200
+    D: CONTEMPORARY_LANDMARK_SCENES,
+
+    // Grandview L200GV
+    G: GRANDVIEW_LANDMARK_SCENES
+};
+
+/* ==========================================================
+   GET LANDMARK SCENE
+   Door model picks the house, door size picks the image.
+========================================================== */
+
+const getLandmarkScene = (
+    doorModel,
+    doorSize
+) => {
+
+    /*
+     * Unknown door model -> Classic images.
+     */
+    const modelScenes =
+        LANDMARK_SCENES_BY_MODEL[doorModel] ||
+        CLASSIC_LANDMARK_SCENES;
+
+    /*
+     * Unknown size -> 16x7 (SIZE_MAP id "2").
+     */
+    return (
+        modelScenes[doorSize] ||
+        modelScenes["2"]
+    );
+};
+
+/* Customer photo
    stretch: door fills the marked box exactly. */
 const getCustomScene = (photo) => {
 
@@ -285,7 +644,7 @@ function Configurator() {
     const [productMenuOpen, setProductMenuOpen] = useState(false);
     const productMenuRef = useRef(null);
 
-    /* 6) Product type – Hardware / Operator only for "Complete"
+    /* Product type – Hardware / Operator only for "Complete"
       (original PRODUCT_TYPE_TAB_VISIBILITY). */
 
     const visibleSections = useMemo(
@@ -322,6 +681,7 @@ function Configurator() {
     const [numOfSections, setNumOfSections] = useState(restored.numOfSections ?? "4");
     const [numOfPanels, setNumOfPanels] = useState(restored.numOfPanels ?? "");
     const [numOfWindows, setNumOfWindows] = useState(restored.numOfWindows ?? "");
+
 
     // Saved colour is an "other" colour -> open the other colours
     const [showPopularColors, setShowPopularColors] = useState(
@@ -372,6 +732,28 @@ function Configurator() {
         ? Number(doorHeightFeet) * 12 + Number(doorHeightInches)
         : selectedSize.height * 12;
 
+    /* ==========================================
+       GLOBAL DOOR SIZE
+       (old getGlobalDoorWidth / getGlobalDoorHeight)
+    ========================================== */
+
+    // Always holds the latest values – the functions are created once
+    const globalDoorSizeRef = useRef({ width, height });
+    globalDoorSizeRef.current = { width, height };
+
+    useEffect(() => {
+
+        window.getGlobalDoorWidth = () => globalDoorSizeRef.current.width;
+        window.getGlobalDoorHeight = () => globalDoorSizeRef.current.height;
+
+        return () => {
+            delete window.getGlobalDoorWidth;
+            delete window.getGlobalDoorHeight;
+        };
+
+    }, []);
+
+
     const sectionCount = Number(numOfSections) || 4;
 
     const isSlimGlass = (glassShape || "").includes("slim");
@@ -388,8 +770,12 @@ function Configurator() {
                 ? "house"
                 : "none";
 
-    const landmarkScene = getLandmarkScene(doorSize);
-
+    /* Landmark house for the selected door model + size:
+       A -> Classic, D -> Contemporary, G -> Classic */
+    const landmarkScene = useMemo(
+        () => getLandmarkScene(doorModel, doorSize),
+        [doorModel, doorSize]
+    );
 
     /* ==========================================
        EFFECTS
@@ -480,42 +866,97 @@ function Configurator() {
     const doorInfo = useMemo(() => getDoorInfo({
         width,
         height,
+
         numOfSections,
         numOfPanels,
         numOfWindows,
+
         panelStyle,
+
         selectedColor,
         finish,
+
         frameColor,
         insertColor,
+
         glassShape,
         glassInsert,
+
         windowPosition,
         customWindows,
+
         slimSections,
         selectedSlimSection,
+
         temperedGlass,
+
         activeTab,
+
         singleEndcap: SINGLE_ENDCAP
     }), [
         width,
         height,
+
         numOfSections,
         numOfPanels,
         numOfWindows,
+
         panelStyle,
+
         selectedColor,
         finish,
+
         frameColor,
         insertColor,
+
         glassShape,
         glassInsert,
+
         windowPosition,
         customWindows,
+
         slimSections,
         selectedSlimSection,
+
         temperedGlass,
+
         activeTab
+    ]);
+
+    /* ==========================================
+       DRIVEN VALUES
+    ========================================== */
+
+    const drivenValues = useMemo(() => getDrivenValues({
+        doorModel,
+        panelStyle,
+        glassShape,
+
+        width,
+        designCode,
+        selectedColor,
+
+        numOfPanels,
+        numOfWindows,
+
+        windowPosition,
+        slimSections,
+        selectedSlimSection
+    }), [
+        doorModel,
+        panelStyle,
+        glassShape,
+
+        width,
+        designCode,
+        selectedColor,
+
+        numOfPanels,
+        numOfWindows,
+
+        windowPosition,
+        slimSections,
+        selectedSlimSection
     ]);
 
     /* ==========================================
@@ -569,14 +1010,25 @@ function Configurator() {
     // PRICE / PRICE_DISPLAY are React-only (header display)
     const ewLiveValues = useMemo(() => {
 
-        const { PRICE, PRICE_DISPLAY, ...rest } = liveValues;
+        const {
+            PRICE,
+            PRICE_DISPLAY,
+            ...rest
+        } = liveValues;
 
         return {
             ...rest,
-            ...getHardwareEwValues(hardware)
+            ...drivenValues,
+            ...getHardwareEwValues(hardware),
+            JSON_OBJ: getJsonObj(doorInfo)
         };
 
-    }, [liveValues, hardware]);
+    }, [
+        liveValues,
+        drivenValues,
+        hardware,
+        doorInfo
+    ]);
 
     useEwSync(ewLiveValues);
 
@@ -649,7 +1101,7 @@ function Configurator() {
                 width,
                 height,
                 doorModel
-            },
+            }
 
         };
     };
@@ -691,6 +1143,73 @@ function Configurator() {
         width
     });
 
+    /* ==========================================
+       HARDWARE CARTON (EW: HARDWARE_CARTON_CONTROLLER.js)
+       Global function from the EW logic group – no import.
+    ========================================== */
+
+    const runGlobalHardwareCarton = () => {
+
+        if (
+            typeof window.runHardwareCarton !==
+            "function"
+        ) {
+            console.warn(
+                "HARDWARE_CARTON_CONTROLLER.js is not loaded in EW."
+            );
+            return;
+        }
+
+        // Assembled / Raw panel or no hardware set -> no carton
+        if (
+            productType !== "complete" ||
+            !hardware.hardwareSet
+        ) {
+            window.clearHardwareCarton?.();
+            return;
+        }
+
+        window.runHardwareCarton({
+            productId: "162059085",
+
+            doorWidthFeet,
+            doorWidthInches,
+            doorHeightFeet,
+            doorHeightInches,
+
+            width,
+            height,
+
+            numSections:
+                Number(numOfSections) || 4,
+
+            endCaps: END_CAPS,
+
+            liftType:
+                hardware.liftType,
+
+            liftHwdesc:
+                getLiftConfig(
+                    hardware.liftType,
+                    hardware.springType
+                ).hwdesc,
+
+            highlift:
+                hardware.highlift,
+
+            trussQty: 0,
+
+            glassShape,
+
+            centerHingeCode:
+                drivenValues.CENTER_HINGE_CODE,
+
+            doorModelDesc:
+                DOOR_MODEL_ATTRS[doorModel]?.desc ||
+                ""
+        });
+    };
+
     const handleConfigure = async (event) => {
 
         event?.preventDefault?.();
@@ -702,10 +1221,15 @@ function Configurator() {
         setConfiguring(true);
 
         try {
-            // Save first – runConfigure moves to the next EW page
+            // 1. Save all inputs (INPUT_JSON_1..4)
             saveConfiguratorInputs(getSaveSnapshot());
 
+            // 2. Hardware carton -> EW inputs
+            runGlobalHardwareCarton();
+
+            // 3. Existing configure flow (moves to the next page)
             await runConfigure(getConfigureContext);
+
         } finally {
             setConfiguring(false);
         }
@@ -818,7 +1342,7 @@ function Configurator() {
         setCustomWindows(nextEnabled);
     };
 
-    const resetGlazing = () => {
+     const resetGlazing = () => {
 
         setGlassShape("");
         setGlassType("");
@@ -832,6 +1356,7 @@ function Configurator() {
         setSelectedSlimSection(null);
 
         setTemperedGlass("");
+        setNumOfWindows("");
 
         setFrameColor(selectedColor);
         setInsertColor(selectedColor);
@@ -844,6 +1369,19 @@ function Configurator() {
         }
 
         setPanelStyle(value);
+
+        resetGlazing();
+    };
+
+
+    // New door model: clear glazing (shape, type, insert, positions)
+    const handleDoorModelChange = (value) => {
+
+        if (value === doorModel) {
+            return;
+        }
+
+        setDoorModel(value);
 
         resetGlazing();
     };
@@ -911,7 +1449,7 @@ function Configurator() {
     // "none" | "house" | "custom"
     const handleBackgroundChange = (value) => {
 
-        // Custom dimension: grey gradient only
+        // Landmark: standard sizes only (upload / My home: always allowed)
         if (value === "house" && customDimension) {
             return;
         }
@@ -1037,7 +1575,8 @@ function Configurator() {
     /* ==========================================
        SCENE LAYOUT
        none   -> grey gradient, door centred (old design)
-       house  -> Landmark photo for the selected size, door fills the opening
+       house  -> Landmark photo for the door model + size,
+                 door fills the opening
        custom -> customer photo, door stretched to the marked box
     ========================================== */
 
@@ -1106,7 +1645,10 @@ function Configurator() {
             ? getCustomScene(homePhoto)
             : landmarkScene;
 
-        /* ---------- Image: cover the scene ---------- */
+        /* ---------- Image: cover the scene ----------
+           scene.width / scene.height are per image, so the
+           1536 x 1024 Classic images and the 1440 x 908
+           Contemporary images both scale correctly. */
 
         const imgScale = Math.max(
             sceneW / scene.width,
@@ -1390,7 +1932,7 @@ function Configurator() {
                     <DimensionsSection
 
                         doorModel={doorModel}
-                        setDoorModel={setDoorModel}
+                        setDoorModel={handleDoorModelChange}
 
                         doorSize={doorSize}
                         setDoorSize={setDoorSize}
@@ -1522,8 +2064,6 @@ function Configurator() {
             }
             : undefined;
 
-
-
     return (
 
         <div className="rw-configurator__layout" ref={layoutRef}>
@@ -1639,7 +2179,7 @@ function Configurator() {
                             {/* Night: dark blue sky tint over the photo */}
                             <div className="house-scene__night-tint" />
 
-                            {/* Night: warm lantern glows (Landmark only) */}
+                            {/* Night: warm lantern glows (Classic houses only) */}
                             {houseLayout.lights.map((light, index) => (
                                 <div
                                     key={index}
@@ -1711,7 +2251,9 @@ function Configurator() {
 
                         background={effectiveBackground}
                         onBackgroundChange={handleBackgroundChange}
+
                         houseThumbUrl={landmarkScene.url}
+
                         customDimension={customDimension}
 
                         wallColor={wallColor}
@@ -1724,8 +2266,6 @@ function Configurator() {
 
                         uploading={photoLoading}
                         message={sceneMessage}
-
-
                     />
 
                     <div className="canvas-footer">

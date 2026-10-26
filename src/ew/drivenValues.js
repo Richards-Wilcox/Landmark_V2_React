@@ -195,6 +195,39 @@ export function computeValue(field, input) {
    CENTER_HINGE_CODE
 ---------------------------------------------------------- */
 
+/* ----------------------------------------------------------
+   Early center hinge code (original getCenterHingeCodeEarly)
+   Uses the panel style only – works before a glass shape
+   is selected (Flush / Plank / grooved colonial).
+---------------------------------------------------------- */
+
+function getCenterHingeCodeEarly({ width, panelStyle, spacing }) {
+
+    const w = Number(width) || 0;
+
+    if (!w || !panelStyle) {
+        return "";
+    }
+
+    let type = "";
+
+    if (panelStyle === "C" && spacing === "P") {
+        type = "colonial_pass";
+    } else if (["C", "F", "B", "V"].includes(panelStyle)) {
+        type = "colonial_std";
+    } else if (["R", "S", "T"].includes(panelStyle)) {
+        type = "ranch_std";
+    }
+
+    const result = type ? getLites(w, type) : null;
+
+    return result ? (result.center_hinge_code || "") : "";
+}
+
+/* ----------------------------------------------------------
+   CENTER_HINGE_CODE
+---------------------------------------------------------- */
+
 export function getCenterHingeCode({
     width,
     panelStyle,
@@ -216,7 +249,13 @@ export function getCenterHingeCode({
         numOfWindows
     });
 
-    return result ? (result.center_hinge_code || "") : "";
+    // No table matched (e.g. Flush with no glass, spacing "")
+    // -> use the panel-style table like getCenterHingeCodeEarly()
+    if (!result) {
+        return getCenterHingeCodeEarly({ width, panelStyle, spacing });
+    }
+
+    return result.center_hinge_code || "";
 }
 
 /* ----------------------------------------------------------
