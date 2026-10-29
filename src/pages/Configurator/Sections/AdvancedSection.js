@@ -1,88 +1,105 @@
 import { useState } from "react";
-import AccessoryImageTile from "../../../components/AccessoryImageTile";
 import ColorSelector from "../../../components/Dimensions/ColorSelector";
 import {
     availableColors,
     optionalColors
 } from "../../../Data/colors";
+import { toggleValue } from "../../../utils/toggleValue";
 
-const doorOptions = [
-    { value: "DOORFACE", label: "Door Face Only" },
-    { value: "HARDWAREONLY", label: "Hardware Only" },
-    { value: "COMPLETEDOOR", label: "Complete Door" }
+/* ==========================================================
+   ADVANCED SECTION
+   - Two-option settings use the same switch as Hardware
+     "Inclined Track" (segmented-toggle hw-segmented)
+   - Snap Latch keeps the option buttons
+   - Decorative Hardware moved to HardwareSection.js
+     (values still live in advancedOptions)
+========================================================== */
+
+const YES_NO = [
+    { value: "Y", label: "YES" },
+    { value: "N", label: "NO" }
 ];
 
-const fullSetOptions = [
-    ["5-6501", 'Colonial 16" and Lift - Cast'],
-    ["5-6502", 'Colonial 16" and Pull - Cast'],
-    ["5-6503", 'Spade 16" and Lift - Stamp'],
-    ["5-6504", 'Spade 16" and Pull - Stamp'],
-    ["5-6505", 'Spade Narrow 16" and Lift - Stamp'],
-    ["5-6506", 'Spade Narrow 16" and Pull - Stamp'],
-    ["5-6507", 'Spade 24" and Lift - Stamp'],
-    ["5-6508", 'Spade 24" and Pull - Stamp'],
-    ["5-6509", 'Spade 30" and Lift - Stamp'],
-    ["5-6510", 'Spade 30" and Pull - Stamp'],
-    ["5-6511", 'Spear 16" and Lift - Cast'],
-    ["5-6512", 'Spear 16" and Pull - Cast'],
-    ["5-6513", 'Spear 16" Assembly and Lift - Cast'],
-    ["5-6514", 'Spear 16" Assembly and Pull - Cast'],
-    ["5-6515", 'Fleur-De-Lys 16" and Lift - Cast'],
-    ["5-6516", 'Fleur-De-Lys 16" and Pull - Cast']
+const NO_YES = [
+    { value: "N", label: "NO" },
+    { value: "Y", label: "YES" }
 ];
 
-const individualOptions = [
-    {
-        key: "L_HANDLE",
-        label: "L Handle",
-        choices: [
-            ["324-425", "L-Handles (K/D)", "324-425.jpg"],
-            ["324-423", "Spade L-Handle (K/D)", "324-423.jpg"],
-            ["324-413", "Fleur-De-Lys (D)", "324-413.jpg"],
-            ["324-416", "Long L-Handle (D)", "324-416.jpg"]
-        ],
-        quantities: ["0", "1", "2"]
-    },
-    {
-        key: "HANDLE",
-        label: "Handle",
-        choices: [
-            ["324-417", "Colonial Lift - Cast", "324-417 Colonial-lift.jpg"],
-            ["324-401", "Fleur-De-Lys Lift - Cast", "324-401 FDL-Lift.jpg"],
-            ["324-402", "Spade Lift - Stamp", "324-402 Spade-Lift.jpg"],
-            ["324-420", "Spear Lift - Cast", "324-420 Spear-Lift.jpg"],
-            ["324-418", "Colonial Pull - Cast", "324-418 Colonial-Pull.jpg"],
-            ["324-422", "Fleur-De-Lys Pull - Cast", "324-422 FDL-Pull.jpg"],
-            ["324-403", "Spade Pull - Stamp", "324-403 Spade-Pull.jpg"],
-            ["324-421", "Spear Pull - Cast", "324-421 Spear-Pull.jpg"]
-        ],
-        quantities: ["0", "1", "2"]
-    },
-    {
-        key: "DOOR_KNOCKER",
-        label: "Door Knockers",
-        choices: [
-            ["324-404", "Lion Kit", "324-404 Lion-Knocker.jpg"],
-            ["324-405", "Fleur-De-Lys Kit", "324-405 FDL-Knocker.jpg"]
-        ],
-        quantities: ["0", "1", "2"]
-    },
-    {
-        key: "STRAPS",
-        label: "Straps",
-        choices: [
-            ["324-419", 'Colonial 16"', "324-419 Colonial-Strap.jpg"],
-            ["324-408", 'Spade 16"', "324-408 Spade-Strap.jpg"],
-            ["324-415", 'Spade Narrow 16"', "324-415.jpg"],
-            ["324-410", 'Spade 24"', "324-410.jpg"],
-            ["324-409", 'Spade 30"', "324-409.jpg"],
-            ["324-407", 'Spear 16"', "324-407 Spear-Strap.jpg"],
-            ["324-406", 'Spear 16" Assembly', "324-406 Spear-Hinge-Strap.jpg"]
-        ],
-        quantities: ["0", "2", "4", "6", "8"]
-    }
+const SHAFT_TYPES = [
+    { value: "T", label: "Tube Shaft" },
+    { value: "K", label: "Keyed Tube Shaft" }
 ];
 
+const SNAP_LATCH_OPTIONS = [
+    { value: "SnapLatch", label: "Snap Latch" },
+    { value: "OnePointLatch", label: "One Point Latch" }
+];
+
+/* ----------------------------------------------------------
+   Two-option switch – same markup as Hardware "Inclined Track"
+---------------------------------------------------------- */
+function SwitchField({
+    label,
+    name,
+    value,
+    options,
+    onChange
+}) {
+    const select = (optionValue) => {
+        if (optionValue !== value) {
+            onChange(optionValue);
+        }
+    };
+
+    return (
+        <div className="landmark-section advanced-switch-field">
+            <div className="landmark-section-header" id={`${name}_LABEL`}>
+                {label}
+            </div>
+            <div
+                className="segmented-toggle hw-segmented"
+                role="radiogroup"
+                aria-labelledby={`${name}_LABEL`}
+            >
+                {options.map(option => {
+                    const isSelected = value === option.value;
+
+                    return (
+                        <div
+                            key={option.value}
+                            role="radio"
+                            aria-checked={isSelected}
+                            tabIndex={0}
+                            className={
+                                isSelected
+                                    ? "segmented-option active"
+                                    : "segmented-option"
+                            }
+                            onClick={() => select(option.value)}
+                            onKeyDown={event => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault();
+                                    select(option.value);
+                                }
+                            }}
+                        >
+                            {option.label}
+                            {isSelected && (
+                                <span className="segmented-indicator">✓</span>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+/* ----------------------------------------------------------
+   Option buttons (Snap Latch)
+   toggleable: clicking the selected button clears it
+   (same as the Glazing tab buttons)
+---------------------------------------------------------- */
 function RadioChoices({
     legend,
     name,
@@ -91,7 +108,8 @@ function RadioChoices({
     onChange,
     layout = "row",
     renderSelectionIndicator,
-    compact = false
+    compact = false,
+    toggleable = false
 }) {
     return (
         <fieldset className="advanced-fieldset">
@@ -103,165 +121,44 @@ function RadioChoices({
                     compact ? "advanced-choices--compact" : ""
                 ].filter(Boolean).join(" ")}
             >
-                {options.map(option => (
-                    <label
-                        className={
-                            value === option.value
-                                ? "advanced-choice selected"
-                                : "advanced-choice"
-                        }
-                        key={option.value}
-                    >
-                        <input
-                            type="radio"
-                            name={name}
-                            value={option.value}
-                            checked={value === option.value}
-                            onChange={() => onChange(option.value)}
-                        />
-                        <span>{option.label}</span>
-                        {renderSelectionIndicator?.(
-                            value === option.value
-                        )}
-                    </label>
-                ))}
+                {options.map(option => {
+                    const isSelected = value === option.value;
+
+                    return (
+                        <label
+                            className={
+                                isSelected
+                                    ? "advanced-choice selected"
+                                    : "advanced-choice"
+                            }
+                            key={option.value}
+                        >
+                            <input
+                                type="radio"
+                                name={name}
+                                value={option.value}
+                                checked={isSelected}
+                                readOnly
+                                // One handler for select + deselect
+                                onClick={() =>
+                                    toggleable
+                                        ? toggleValue(value, option.value, onChange)
+                                        : onChange(option.value)
+                                }
+                            />
+                            <span>{option.label}</span>
+                            {renderSelectionIndicator?.(isSelected)}
+                        </label>
+                    );
+                })}
             </div>
         </fieldset>
     );
 }
 
-function SelectField({
-    label,
-    name,
-    value,
-    options,
-    onChange,
-    disabled = false,
-    compact = false
-}) {
-    return (
-        <label
-            className={[
-                "advanced-select-field",
-                compact ? "advanced-select-field--compact" : ""
-            ].filter(Boolean).join(" ")}
-            htmlFor={name}
-        >
-            <span>{label}</span>
-            <select
-                id={name}
-                name={name}
-                value={value}
-                disabled={disabled}
-                onChange={event => onChange(event.target.value)}
-            >
-                <option value="NONE">NONE</option>
-                {options.map(([optionValue, optionLabel]) => (
-                    <option value={optionValue} key={optionValue}>
-                        {optionLabel}
-                    </option>
-                ))}
-            </select>
-        </label>
-    );
-}
-
-function QuantityField({
-    label,
-    name,
-    value,
-    options,
-    onChange,
-    disabled = false
-}) {
-    return (
-        <label className="advanced-select-field" htmlFor={name}>
-            <span>{label}</span>
-            <select
-                id={name}
-                name={name}
-                value={value}
-                disabled={disabled}
-                onChange={event => onChange(event.target.value)}
-            >
-                {options.map(quantity => (
-                    <option value={quantity} key={quantity}>
-                        {quantity}
-                    </option>
-                ))}
-            </select>
-        </label>
-    );
-}
-
-function QuantityStepper({
-    label,
-    name,
-    value,
-    min,
-    max,
-    onChange
-}) {
-    const quantity = Number(value) || 0;
-
-    const setQuantity = nextValue => {
-        onChange(String(Math.max(min, Math.min(max, Math.trunc(nextValue)))));
-    };
-
-    return (
-        <div className="advanced-select-field">
-            <label htmlFor={name}>{label}</label>
-            <div className="quantity-stepper">
-                <button
-                    type="button"
-                    aria-label={`Decrease ${label}`}
-                    disabled={quantity <= min}
-                    onClick={() => setQuantity(quantity - 1)}
-                >
-                    -
-                </button>
-                <input
-                    id={name}
-                    name={name}
-                    type="number"
-                    step="1"
-                    min={min}
-                    max={max}
-                    value={value}
-                    onChange={event => {
-                        const nextValue = event.target.value;
-                        if (nextValue === "") {
-                            onChange("");
-                            return;
-                        }
-
-                        const parsedValue = Number(nextValue);
-                        if (Number.isFinite(parsedValue)) {
-                            setQuantity(parsedValue);
-                        }
-                    }}
-                    onBlur={() => {
-                        if (value === "") {
-                            onChange(String(min));
-                        }
-                    }}
-                />
-                <button
-                    type="button"
-                    aria-label={`Increase ${label}`}
-                    disabled={quantity >= max}
-                    onClick={() => setQuantity(quantity + 1)}
-                >
-                    +
-                </button>
-            </div>
-        </div>
-    );
-}
-
 function AdvancedSection({
-    advancedOptions,
-    setAdvancedOptions,
+    advancedOptions = {},
+    setAdvancedOptions = () => {},
     panelStyle,
     renderSelectionIndicator
 }) {
@@ -275,28 +172,6 @@ function AdvancedSection({
         }));
     };
 
-    const selectDecorativeHardware = value => {
-        setAdvancedOptions(previous => ({
-            ...previous,
-            DEC_HARDWARE: value,
-            FULL_SETS: value === "FS" ? previous.FULL_SETS : "NONE",
-            FULL_SETS_QTY: previous.FULL_SETS_QTY,
-            L_HANDLE: value === "IC" ? previous.L_HANDLE : "NONE",
-            L_HANDLE_QTY: value === "IC" ? previous.L_HANDLE_QTY : "0",
-            HANDLE: value === "IC" ? previous.HANDLE : "NONE",
-            HANDLE_QTY: value === "IC" ? previous.HANDLE_QTY : "0",
-            DOOR_KNOCKER: value === "IC" ? previous.DOOR_KNOCKER : "NONE",
-            DOOR_KNOCKER_QTY: value === "IC" ? previous.DOOR_KNOCKER_QTY : "0",
-            STRAPS: value === "IC" ? previous.STRAPS : "NONE",
-            STRAPS_QTY: value === "IC" ? previous.STRAPS_QTY : "0",
-            DOOR_STUDS: value === "IC" ? previous.DOOR_STUDS : "N",
-            DOOR_STUDS_QTY: value === "IC" ? previous.DOOR_STUDS_QTY : "0",
-            GRIPPER_SCREWS: value === "IC" ? previous.GRIPPER_SCREWS : "N",
-            MAGNETIC_SET: value === "MS" ? previous.MAGNETIC_SET : "NONE",
-            MAGNETIC_SET_QTY: previous.MAGNETIC_SET_QTY
-        }));
-    };
-
     return (
         <section
             className="advanced-section"
@@ -307,73 +182,55 @@ function AdvancedSection({
             </h3>
 
             <div className="advanced-group">
-                <RadioChoices
-                    legend="Door Options"
-                    name="DOOROPT"
-                    value={advancedOptions.DOOROPT}
-                    options={doorOptions}
-                    onChange={value => updateOption("DOOROPT", value)}
-                    renderSelectionIndicator={renderSelectionIndicator}
-                />
 
+                {/* ---------- Drill / End Caps ---------- */}
                 <div className="advanced-control-row">
-                    <RadioChoices
-                        legend="Drill for Hinges?"
+                    <SwitchField
+                        label="Drill for Hinges?"
                         name="DRILL"
                         value={advancedOptions.DRILL}
-                        options={[
-                            { value: "Y", label: "Yes" },
-                            { value: "N", label: "No" }
-                        ]}
+                        options={YES_NO}
                         onChange={value => updateOption("DRILL", value)}
                     />
-                    <RadioChoices
-                        legend="Double End Caps"
+                    <SwitchField
+                        label="Double End Caps"
                         name="END_CAPS"
                         value={advancedOptions.END_CAPS}
-                        options={[
-                            { value: "Y", label: "Yes" },
-                            { value: "N", label: "No" }
-                        ]}
+                        options={YES_NO}
                         onChange={value => updateOption("END_CAPS", value)}
                     />
                 </div>
 
+                {/* ---------- Extra Truss / Shaft Type ---------- */}
                 <div className="advanced-control-row">
-                    <RadioChoices
-                        legend="Extra Truss"
+                    <SwitchField
+                        label="Extra Truss"
                         name="EXTRA_TRUSS"
                         value={advancedOptions.EXTRA_TRUSS}
-                        options={[
-                            { value: "Y", label: "Yes" },
-                            { value: "N", label: "No" }
-                        ]}
+                        options={YES_NO}
                         onChange={value => updateOption("EXTRA_TRUSS", value)}
                     />
-                    <RadioChoices
-                        legend="Shaft Type"
+                    <SwitchField
+                        label="Shaft Type"
                         name="SHAFT_TYPE"
                         value={advancedOptions.SHAFT_TYPE}
-                        options={[
-                            { value: "T", label: "Tube Shaft" },
-                            { value: "K", label: "Keyed Tube Shaft" }
-                        ]}
+                        options={SHAFT_TYPES}
                         onChange={value => updateOption("SHAFT_TYPE", value)}
                     />
                 </div>
 
-                <RadioChoices
-                    legend="Window Cut Outs"
-                    name="WINDOW_CUTOUTS"
-                    value={advancedOptions.WINDOW_CUTOUTS}
-                    options={[
-                        { value: "N", label: "No" },
-                        { value: "Y", label: "Yes" }
-                    ]}
-                    onChange={value => updateOption("WINDOW_CUTOUTS", value)}
-                    compact
-                />
+                {/* ---------- Window Cut Outs (half width) ---------- */}
+                <div className="advanced-control-row">
+                    <SwitchField
+                        label="Window Cut Outs"
+                        name="WINDOW_CUTOUTS"
+                        value={advancedOptions.WINDOW_CUTOUTS}
+                        options={NO_YES}
+                        onChange={value => updateOption("WINDOW_CUTOUTS", value)}
+                    />
+                </div>
 
+                {/* ---------- Jamb Seal Colour ---------- */}
                 <ColorSelector
                     title="Jamb Seal Colour"
                     availableColors={availableColors}
@@ -391,205 +248,36 @@ function AdvancedSection({
                     setShowPopularColors={setShowPopularJambColors}
                 />
 
+                {/* ---------- Top / Bottom Seal ---------- */}
                 <div className="advanced-control-row">
-                    <RadioChoices
-                        legend="Top Seal"
+                    <SwitchField
+                        label="Top Seal"
                         name="TOP_SEAL"
                         value={advancedOptions.TOP_SEAL}
-                        options={[
-                            { value: "N", label: "No" },
-                            { value: "Y", label: "Yes" }
-                        ]}
+                        options={NO_YES}
                         onChange={value => updateOption("TOP_SEAL", value)}
                     />
-                    <RadioChoices
-                        legend="Bottom Seal"
+                    <SwitchField
+                        label="Bottom Seal"
                         name="BOTTOM_SEAL"
                         value={advancedOptions.BOTTOM_SEAL}
-                        options={[
-                            { value: "N", label: "No" },
-                            { value: "Y", label: "Yes" }
-                        ]}
+                        options={NO_YES}
                         onChange={value => updateOption("BOTTOM_SEAL", value)}
                     />
                 </div>
 
+                {/* ---------- Snap Latch (buttons) ---------- */}
                 <RadioChoices
                     legend="Snap Latch"
                     name="SNAP_LATCH_OPTION"
                     value={advancedOptions.SNAP_LATCH_OPTION}
-                    options={[
-                        { value: "SnapLatch", label: "Snap Latch" },
-                        { value: "OnePointLatch", label: "One Point Latch" }
-                    ]}
-                    onChange={value =>
-                        updateOption("SNAP_LATCH_OPTION", value)
-                    }
+                    options={SNAP_LATCH_OPTIONS}
+                    onChange={value => updateOption("SNAP_LATCH_OPTION", value)}
                     renderSelectionIndicator={renderSelectionIndicator}
                     compact
+                    toggleable
                 />
 
-                <RadioChoices
-                    legend="Decorative Hardware"
-                    name="DEC_HARDWARE"
-                    value={advancedOptions.DEC_HARDWARE}
-                    options={[
-                        { value: "FS", label: "Full Sets" },
-                        { value: "IC", label: "Individual Components" },
-                        { value: "MS", label: "Magnetic Sets" }
-                    ]}
-                    onChange={selectDecorativeHardware}
-                    renderSelectionIndicator={renderSelectionIndicator}
-                />
-
-                {advancedOptions.DEC_HARDWARE === "FS" && (
-                    <div className="advanced-accessory-card advanced-accessory-card--compact">
-                        <SelectField
-                            label="Decorative Full Sets"
-                            name="FULL_SETS"
-                            value={advancedOptions.FULL_SETS}
-                            options={fullSetOptions}
-                            onChange={value => updateOption("FULL_SETS", value)}
-                            compact
-                        />
-                        <QuantityField
-                            label="Qty"
-                            name="FULL_SETS_QTY"
-                            value={advancedOptions.FULL_SETS_QTY}
-                            options={["0", "1", "2"]}
-                            disabled={advancedOptions.FULL_SETS === "NONE"}
-                            onChange={value =>
-                                updateOption("FULL_SETS_QTY", value)
-                            }
-                        />
-                    </div>
-                )}
-
-                {advancedOptions.DEC_HARDWARE === "IC" && (
-                    <div className="advanced-accessory-card">
-                        {individualOptions.map(item => {
-                            const selectedChoice = item.choices.find(
-                                ([value]) =>
-                                    value === advancedOptions[item.key]
-                            );
-
-                            return (
-                                <div
-                                    className="advanced-accessory-row"
-                                    key={item.key}
-                                >
-                                    <AccessoryImageTile
-                                        accessoryName={selectedChoice?.[1]}
-                                        imageFile={selectedChoice?.[2]}
-                                    />
-                                    <div className="advanced-accessory-controls">
-                                        <SelectField
-                                            label={item.label}
-                                            name={item.key}
-                                            value={advancedOptions[item.key]}
-                                            options={item.choices}
-                                            compact
-                                            onChange={value =>
-                                                setAdvancedOptions(previous => ({
-                                                    ...previous,
-                                                    [item.key]: value,
-                                                    [`${item.key}_QTY`]:
-                                                        value === "NONE"
-                                                            ? "0"
-                                                            : previous[
-                                                                `${item.key}_QTY`
-                                                            ]
-                                                }))
-                                            }
-                                        />
-                                        <QuantityField
-                                            label="Qty"
-                                            name={`${item.key}_QTY`}
-                                            value={advancedOptions[`${item.key}_QTY`]}
-                                            options={item.quantities}
-                                            disabled={advancedOptions[item.key] === "NONE"}
-                                            onChange={value =>
-                                                updateOption(`${item.key}_QTY`, value)
-                                            }
-                                        />
-                                    </div>
-                                </div>
-                            );
-                        })}
-                        <div className="advanced-accessory-row">
-                            <RadioChoices
-                                legend="Door Studs"
-                                name="DOOR_STUDS"
-                                value={advancedOptions.DOOR_STUDS}
-                                options={[
-                                    { value: "N", label: "No" },
-                                    { value: "Y", label: "Yes" }
-                                ]}
-                                onChange={value =>
-                                    setAdvancedOptions(previous => ({
-                                        ...previous,
-                                        DOOR_STUDS: value,
-                                        DOOR_STUDS_QTY:
-                                            previous.DOOR_STUDS_QTY
-                                    }))
-                                }
-                            />
-                            <QuantityStepper
-                                label="Door Studs Qty"
-                                name="DOOR_STUDS_QTY"
-                                value={advancedOptions.DOOR_STUDS_QTY}
-                                min={0}
-                                max={100}
-                                onChange={value =>
-                                    updateOption("DOOR_STUDS_QTY", value)
-                                }
-                            />
-                        </div>
-                        <RadioChoices
-                            legend="Gripper Screws"
-                            name="GRIPPER_SCREWS"
-                            value={advancedOptions.GRIPPER_SCREWS}
-                            options={[
-                                { value: "N", label: "No" },
-                                { value: "Y", label: "Yes" }
-                            ]}
-                            onChange={value =>
-                                updateOption("GRIPPER_SCREWS", value)
-                            }
-                        />
-                    </div>
-                )}
-
-                {advancedOptions.DEC_HARDWARE === "MS" && (
-                    <div className="advanced-accessory-card advanced-accessory-card--compact">
-                        <SelectField
-                            label="Decorative Magnetic Set"
-                            name="MAGNETIC_SET"
-                            value={advancedOptions.MAGNETIC_SET}
-                            options={[
-                                ["5-6517", "Manor"],
-                                ["5-6518", "Mission"]
-                            ]}
-                            onChange={value =>
-                                setAdvancedOptions(previous => ({
-                                    ...previous,
-                                    MAGNETIC_SET: value
-                                }))
-                            }
-                            compact
-                        />
-                        <QuantityStepper
-                            label="Magnetic Set Qty"
-                            name="MAGNETIC_SET_QTY"
-                            value={advancedOptions.MAGNETIC_SET_QTY}
-                            min={0}
-                            max={10}
-                            onChange={value =>
-                                updateOption("MAGNETIC_SET_QTY", value)
-                            }
-                        />
-                    </div>
-                )}
             </div>
         </section>
     );

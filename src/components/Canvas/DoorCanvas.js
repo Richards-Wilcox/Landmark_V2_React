@@ -1,4 +1,16 @@
+/* ==========================================================
+   DOOR CANVAS
+   React component: draws the door, handles zoom / pan and
+   click-to-select windows (Custom window position).
+
+   Layout   -> canvasLayout.js  (where things go)
+   Door     -> canvasDoor.js    (texture + panels)
+   Windows  -> canvasWindows.js (glass, inserts, frames, hints)
+   Slim UI  -> SlimSectionEditor.js
+========================================================== */
+
 import { useEffect, useMemo, useRef, useState } from "react";
+
 import {
     MdZoomIn,
     MdZoomOut,
@@ -6,52 +18,37 @@ import {
 } from "react-icons/md";
 
 import {
-    availableColors,
-    optionalColors,
-    silverColor
-} from "../../Data/colors";
-
-import {
+    CANVAS_WIDTH,
+    CANVAS_HEIGHT,
+    getDoorScale,
     getPanelDimensions,
     getPanelPositions,
-    getSectionHeights
-} from "./canvasGeometry";
+    getSectionHeights,
+    buildWindowSections,
+    getFacePanelType,
+    isSpecialFace,
+    getHintsVisible
+} from "./canvasLayout";
 
 import {
+    findColor,
+    getTextureImage,
+    getPatternScale,
     drawSectionLines,
     drawSectionPanel,
     drawPlankPanels,
     drawColonialGroovedSection,
     drawRanchGroovedSection,
     drawSmoothRanchSection
-} from "./doorDrawingUtils";
+} from "./canvasDoor";
 
-import {
-    getTextureImage
-} from "./canvasTextureUtils";
-
-import {
-    drawWindows
-} from "./canvasWindows";
-
-import {
-    buildWindowSections,
-    getFacePanelType,
-    isSpecialFace,
-    getHintsVisible,
-    getCanSelectWindows
-} from "./canvasWindowLayout";
+import { drawWindows } from "./canvasWindows";
 
 import SlimSectionEditor from "./SlimSectionEditor";
-
-const CANVAS_WIDTH = 900;
-const CANVAS_HEIGHT = 700;
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.25;
-
-
 
 function DoorCanvas({
     doorModel,
@@ -88,6 +85,7 @@ function DoorCanvas({
 }) {
 
     const canvasRef = useRef(null);
+
     /* ==========================================
        ZOOM + PAN
     ========================================== */
@@ -98,13 +96,13 @@ function DoorCanvas({
 
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
+
     // Latest values for the native wheel listener
     const zoomRef = useRef(zoom);
     const panRef = useRef(pan);
 
     zoomRef.current = zoom;
     panRef.current = pan;
-
 
     // Back at 100%: re-center
     useEffect(() => {
@@ -210,17 +208,13 @@ function DoorCanvas({
         const viewport = viewportRef.current;
 
         if (!viewport) {
-            return;
+            return undefined;
         }
 
         const handleWheel = (event) => {
 
             // Let the slim menu and zoom controls behave normally
-            if (
-                event.target.closest(
-                    ".slim-options-container, .canvas-zoom-controls"
-                )
-            ) {
+            if (event.target.closest(".slim-options-container, .canvas-zoom-controls")) {
                 return;
             }
 
@@ -242,21 +236,16 @@ function DoorCanvas({
             }
 
             /* Keep the point under the cursor in place */
-
             const rect = viewport.getBoundingClientRect();
-
             const cursorX = event.clientX - rect.left - rect.width / 2;
             const cursorY = event.clientY - rect.top - rect.height / 2;
-
             const ratio = next / current;
-
             const p = panRef.current;
 
             let x = cursorX - (cursorX - p.x) * ratio;
             let y = cursorY - (cursorY - p.y) * ratio;
 
             /* Keep the door inside the viewport */
-
             const maxX = (viewport.clientWidth * (next - 1)) / 2;
             const maxY = (viewport.clientHeight * (next - 1)) / 2;
 
@@ -277,7 +266,7 @@ function DoorCanvas({
 
     const shape = glassShape || "";
 
-    // Numbers used by getPanelPositions special check
+    // Numbers used by the getPanelPositions special check
     const selectedPanels = Number(numOfPanels) || 0;
     const selectedWindows = Number(numOfWindows) || 0;
 
@@ -287,13 +276,7 @@ function DoorCanvas({
 
     const layout = useMemo(() => {
 
-        const maxWidth = 700;
-        const maxHeight = 500;
-
-        const scale = Math.min(
-            maxWidth / width,
-            maxHeight / height
-        );
+        const scale = getDoorScale(width, height);
 
         const doorWidth = width * scale;
         const doorHeight = height * scale;
@@ -303,10 +286,7 @@ function DoorCanvas({
 
         const sectionCount = Number(numOfSections) || 4;
 
-        const sectionHeights = getSectionHeights(
-            height,
-            sectionCount
-        );
+        const sectionHeights = getSectionHeights(height, sectionCount);
 
         const windowSections = buildWindowSections({
             panelStyle,
@@ -348,6 +328,13 @@ function DoorCanvas({
         selectedWindows
     ]);
 
+    /* ==========================================
+       CUSTOM WINDOW MODE
+       Dotted hints, click-to-select and the slim editor
+       are available only in Custom (one rule, shared with
+       JSON_OBJ draw_hints – see getHintsVisible).
+    ========================================== */
+
     const hintsVisible = getHintsVisible({
         activeTab,
         panelStyle,
@@ -355,17 +342,9 @@ function DoorCanvas({
         windowPosition
     });
 
-    const canSelectWindows = getCanSelectWindows({
-        activeTab,
-        panelStyle,
-        glassShape: shape,
-        windowPosition
-    });
+    const canSelectWindows = hintsVisible;
 
-    const showSlimEditor =
-        activeTab === "glazing" &&
-        shape.includes("slim") &&
-        windowPosition === "custom";
+    const showSlimEditor = hintsVisible && shape.includes("slim");
 
     /* ==========================================
        DRAW
@@ -399,91 +378,37 @@ function DoorCanvas({
         const sectionHeight = doorHeight / sectionCount;
 
         /* Colors */
+        const doorColor = findColor(selectedColor)?.hex || "#d9d9d9";
+        const frameHex = findColor(frameColor)?.hex || doorColor;
+        const insertHex = findColor(insertColor)?.hex || doorColor;
 
-        const allColors = [
-            ...availableColors,
-            ...optionalColors,
-            silverColor
-        ];
+        const texturePath = getTextureImage(finish, selectedColor);
 
-        const doorColor =
-            allColors.find(
-                color => color.value === selectedColor
-            )?.hex || "#d9d9d9";
-
-        const frameHex =
-            allColors.find(
-                color => color.value === frameColor
-            )?.hex || doorColor;
-
-        const insertHex =
-            allColors.find(
-                color => color.value === insertColor
-            )?.hex || doorColor;
-
-        const texturePath = getTextureImage(
-            finish,
-            selectedColor
-        );
-
-        const isSpecial = isSpecialFace(
-            panelStyle,
-            shape
-        );
+        const isSpecial = isSpecialFace(panelStyle, shape);
 
         const drawDoor = (pattern) => {
 
-            ctx.clearRect(
-                0,
-                0,
-                canvas.width,
-                canvas.height
-            );
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            /* Door Background */
-
+            /* Door background */
             ctx.fillStyle = doorColor;
-
-            ctx.fillRect(
-                doorX,
-                doorY,
-                doorWidth,
-                doorHeight
-            );
+            ctx.fillRect(doorX, doorY, doorWidth, doorHeight);
 
             /* Texture (drawn BEFORE panels and windows) */
-
             if (pattern) {
-
                 ctx.save();
-
                 ctx.globalAlpha =
-                    (
-                        selectedColor === "K" ||
-                        selectedColor === "V" ||
-                        selectedColor === "F"
-                    )
+                    (selectedColor === "K" || selectedColor === "V" || selectedColor === "F")
                         ? 0.55
                         : 0.30;
-
                 ctx.globalCompositeOperation = "multiply";
-
                 ctx.fillStyle = pattern;
-
-                ctx.fillRect(
-                    doorX,
-                    doorY,
-                    doorWidth,
-                    doorHeight
-                );
-
+                ctx.fillRect(doorX, doorY, doorWidth, doorHeight);
                 ctx.restore();
             }
 
             /* Selected section highlight (original: hints && section.selected) */
-
             if (hintsVisible) {
-
                 windowSections.forEach(section => {
 
                     if (!section.selected) {
@@ -491,35 +416,23 @@ function DoorCanvas({
                     }
 
                     ctx.save();
-
                     ctx.fillStyle = "rgba(255, 0, 0, 0.25)";
-
                     ctx.fillRect(
                         doorX,
                         doorY + section.ypos * scale,
                         doorWidth,
                         section.height * scale
                     );
-
                     ctx.restore();
                 });
             }
 
-
-            /* Door Border */
-
+            /* Door border */
             ctx.strokeStyle = "rgba(0,0,0,0.35)";
             ctx.lineWidth = 1;
+            ctx.strokeRect(doorX, doorY, doorWidth, doorHeight);
 
-            ctx.strokeRect(
-                doorX,
-                doorY,
-                doorWidth,
-                doorHeight
-            );
-
-            /* Section Lines */
-
+            /* Section lines */
             drawSectionLines(
                 ctx,
                 panelStyle,
@@ -531,7 +444,6 @@ function DoorCanvas({
             );
 
             /* Plank */
-
             drawPlankPanels(
                 ctx,
                 panelStyle,
@@ -543,145 +455,77 @@ function DoorCanvas({
             );
 
             /* Colonial / Ranch / Grooved */
+            if (["C", "R", "T", "B", "S"].includes(panelStyle)) {
 
-            if (
-                ["C", "R", "T", "B", "S"].includes(panelStyle)
-            ) {
-
-                const panelType =
-                    getFacePanelType(panelStyle);
-
-                const dimensions =
-                    getPanelDimensions(panelType);
+                const panelType = getFacePanelType(panelStyle);
+                const dimensions = getPanelDimensions(panelType);
 
                 // NUM_OF_PANELS special value changes the
-                // punch count + spacing (original getPanelPositions)
-                const defaultPositions =
-                    getPanelPositions({
-                        panelType,
-                        doorWidth: width,
-                        face: panelStyle,
-                        glassShape: shape,
-                        selectedPanels,
-                        selectedWindows
-                    });
+                // panel count + spacing (original getPanelPositions)
+                const defaultPositions = getPanelPositions({
+                    panelType,
+                    doorWidth: width,
+                    face: panelStyle,
+                    glassShape: shape,
+                    selectedPanels,
+                    selectedWindows
+                });
 
-                for (
-                    let row = 0;
-                    row < sectionCount;
-                    row++
-                ) {
+                const info = {
+                    scale,
+                    xpos: doorX,
+                    ypos: doorY,
+                    color: doorColor
+                };
+
+                for (let row = 0; row < sectionCount; row++) {
 
                     /* Special face: panel layout follows window layout */
-
-                    const override = isSpecial
-                        ? windowSections[row]
-                        : null;
+                    const override = isSpecial ? windowSections[row] : null;
 
                     const section = {
-
-                        positions:
-                            override?.positions ||
-                            defaultPositions,
-
-                        panel_width:
-                            override?.panel_width ||
-                            dimensions.panelWidth,
-
-                        panel_height:
-                            override?.panel_height ||
-                            dimensions.panelHeight,
-
-                        height:
-                            sectionHeights[row] ||
-                            (height / sectionCount),
-
-                        ypos:
-                            sectionHeights
-                                .slice(0, row)
-                                .reduce(
-                                    (total, value) =>
-                                        total + value,
-                                    0
-                                )
-                    };
-
-                    const info = {
-                        scale,
-                        xpos: doorX,
-                        ypos: doorY,
-                        color: doorColor
+                        positions: override?.positions || defaultPositions,
+                        panel_width: override?.panel_width || dimensions.panelWidth,
+                        panel_height: override?.panel_height || dimensions.panelHeight,
+                        height: sectionHeights[row] || (height / sectionCount),
+                        ypos: sectionHeights
+                            .slice(0, row)
+                            .reduce((total, value) => total + value, 0)
                     };
 
                     if (panelStyle === "B") {
-
-                        drawColonialGroovedSection(
-                            ctx,
-                            section,
-                            info
-                        );
-
-                    }
-                    else if (panelStyle === "S") {
-
-                        drawRanchGroovedSection(
-                            ctx,
-                            section,
-                            info
-                        );
-
-                    }
-                    else if (panelStyle === "T") {
-
-                        drawSmoothRanchSection(
-                            ctx,
-                            section,
-                            info,
-                            false
-                        );
-
-                    }
-                    else {
-
-                        drawSectionPanel(
-                            ctx,
-                            section,
-                            info
-                        );
-
+                        drawColonialGroovedSection(ctx, section, info);
+                    } else if (panelStyle === "S") {
+                        drawRanchGroovedSection(ctx, section, info);
+                    } else if (panelStyle === "T") {
+                        drawSmoothRanchSection(ctx, section, info, false);
+                    } else {
+                        drawSectionPanel(ctx, section, info);
                     }
                 }
             }
 
-            /* Windows + Inserts + Dotted Hints (drawn LAST) */
-
+            /* Windows + inserts + dotted hints (drawn LAST) */
             if (shape) {
-
-                drawWindows(
-                    ctx,
-                    windowSections,
-                    {
-                        scale,
-                        xpos: doorX,
-                        ypos: doorY,
-                        glassShape: shape,
-                        glassInsert,
-                        windowPosition,
-                        frameColor: frameHex,
-                        insertColor: insertHex,
-                        doorColor,
-                        showHints: hintsVisible
-                    }
-                );
+                drawWindows(ctx, windowSections, {
+                    scale,
+                    xpos: doorX,
+                    ypos: doorY,
+                    glassShape: shape,
+                    glassInsert,
+                    windowPosition,
+                    frameColor: frameHex,
+                    insertColor: insertHex,
+                    doorColor,
+                    showHints: hintsVisible
+                });
             }
         };
 
         /* Texture loading */
 
         if (!texturePath) {
-
             drawDoor(null);
-
             return;
         }
 
@@ -691,51 +535,24 @@ function DoorCanvas({
 
         texture.onload = () => {
 
-            const pattern = ctx.createPattern(
-                texture,
-                "repeat"
-            );
+            const pattern = ctx.createPattern(texture, "repeat");
 
             if (!pattern) {
-
                 drawDoor(null);
-
                 return;
             }
 
+            const textureScale = getPatternScale(finish, selectedColor) * scale;
+
             const matrix = new DOMMatrix();
-
-            let textureScale = 0.04;
-
-            // Woodgrain
-
-            if (
-                selectedColor === "X" ||
-                selectedColor === "Y"
-            ) {
-                textureScale = 0.05;
-            }
-
-            // Stucco
-
-            if (finish === "S") {
-                textureScale = 0.005;
-            }
-
-            matrix.scaleSelf(
-                textureScale * scale,
-                textureScale * scale
-            );
-
+            matrix.scaleSelf(textureScale, textureScale);
             pattern.setTransform(matrix);
 
             drawDoor(pattern);
         };
 
         texture.onerror = () => {
-
             drawDoor(null);
-
         };
 
         texture.src = texturePath;
@@ -745,19 +562,14 @@ function DoorCanvas({
         width,
         height,
         panelStyle,
-
         selectedColor,
         finish,
-
         frameColor,
         insertColor,
-
         shape,
         glassInsert,
-
         windowPosition,
         hintsVisible,
-
         selectedPanels,
         selectedWindows
     ]);
@@ -768,7 +580,7 @@ function DoorCanvas({
 
     const handleCanvasClick = (event) => {
 
-        // Ignore the click that ends a drag (pan while zoomed).
+        // Ignore the click that ends a drag (pan while zoomed)
         if (movedRef.current) {
             movedRef.current = false;
             return;
@@ -784,50 +596,26 @@ function DoorCanvas({
             return;
         }
 
-        /* Convert screen position -> canvas position */
-
+        /* Screen position -> canvas position */
         const rect = canvas.getBoundingClientRect();
 
-        const mouseX =
-            (event.clientX - rect.left) *
-            (canvas.width / rect.width);
+        const mouseX = (event.clientX - rect.left) * (canvas.width / rect.width);
+        const mouseY = (event.clientY - rect.top) * (canvas.height / rect.height);
 
-        const mouseY =
-            (event.clientY - rect.top) *
-            (canvas.height / rect.height);
+        const { scale, doorX, doorY, windowSections } = layout;
 
-        const {
-            scale,
-            doorX,
-            doorY,
-            windowSections
-        } = layout;
-
-        for (
-            let sIndex = 0;
-            sIndex < windowSections.length;
-            sIndex++
-        ) {
+        for (let sIndex = 0; sIndex < windowSections.length; sIndex++) {
 
             const section = windowSections[sIndex];
 
             const winW = section.panel_width * scale;
             const winH = section.panel_height * scale;
+            const yOffset = (section.height * scale - winH) / 2;
+            const winY = section.ypos * scale + doorY + yOffset;
 
-            const yOffset =
-                (section.height * scale - winH) / 2;
+            for (let i = 0; i < section.positions.length; i++) {
 
-            const winY =
-                section.ypos * scale + doorY + yOffset;
-
-            for (
-                let i = 0;
-                i < section.positions.length;
-                i++
-            ) {
-
-                const winX =
-                    section.positions[i] * scale + doorX;
+                const winX = section.positions[i] * scale + doorX;
 
                 const hit =
                     mouseX >= winX &&
@@ -840,48 +628,33 @@ function DoorCanvas({
                 }
 
                 /* Copy current state of every section */
-
-                const nextEnabled = windowSections.map(
-                    s => [...s.enabled]
-                );
+                const nextEnabled = windowSections.map(s => [...s.enabled]);
 
                 if (section.slim_one) {
-
                     /* Slim "One Lite": only ONE window allowed */
-
                     nextEnabled[sIndex].fill(false);
                     nextEnabled[sIndex][i] = true;
-
                 } else {
-
                     /* Normal: toggle */
-
-                    nextEnabled[sIndex][i] =
-                        !nextEnabled[sIndex][i];
+                    nextEnabled[sIndex][i] = !nextEnabled[sIndex][i];
                 }
 
                 onWindowsChange(nextEnabled);
-
                 return;
             }
         }
     };
 
     /* Cursor (original CANVAS_CURSOR node) */
-
     const isLocked =
         shape &&
-        (
-            shape.includes("grand") ||
-            isSpecialFace(panelStyle, shape)
-        );
+        (shape.includes("grand") || isSpecialFace(panelStyle, shape));
 
-    const cursor =
-        activeTab === "glazing" && isLocked
+    const cursor = canSelectWindows
+        ? "pointer"
+        : activeTab === "glazing" && isLocked
             ? "not-allowed"
-            : canSelectWindows
-                ? "pointer"
-                : "default";
+            : "default";
 
     return (
         <div
@@ -896,15 +669,12 @@ function DoorCanvas({
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerUp}
         >
-
             <div
                 className="door-canvas-wrapper"
                 style={{
-                    transform:
-                        `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`
+                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`
                 }}
             >
-
                 <canvas
                     ref={canvasRef}
                     id="CONFIG_CANVAS"
@@ -917,26 +687,21 @@ function DoorCanvas({
                 {showSlimEditor && (
                     <SlimSectionEditor
                         sections={layout.windowSections}
-
                         scale={layout.scale}
                         doorX={layout.doorX}
                         doorY={layout.doorY}
                         doorWidth={layout.doorWidth}
                         doorHeight={layout.doorHeight}
-
                         canvasWidth={CANVAS_WIDTH}
                         canvasHeight={CANVAS_HEIGHT}
-
                         selectedSection={selectedSlimSection}
                         onSelectSection={onSelectSlimSection}
                         onSectionChange={onSlimSectionChange}
                     />
                 )}
-
             </div>
 
             {/* Zoom controls (not scaled) */}
-
             <div className="canvas-zoom-controls">
 
                 <button
@@ -971,7 +736,6 @@ function DoorCanvas({
                 </button>
 
             </div>
-
         </div>
     );
 }

@@ -9,19 +9,29 @@
      4. finalvalidation()
      5. nextPage()
 
-   React flow:
-     3a. React drivers, IN ORDER (each gets the values so far):
-         section bundle -> glazing code -> scheduling
-     3b. write all values into the EW inputs
-     3c. call the global (non-React) drivers:
-         addHardwareDrivers, addTrackDrivers, addOperatorEvents
-     5.  nextPage()
+   React flow (ONE place for the whole order):
+     1. block double clicks
+     2. let the loader paint
+     3. React drivers, IN ORDER (each gets the values so far):
+          section bundle -> glazing code -> scheduling
+     4. write all React values into the EW inputs
+     5. EW controllers (shared global files in EW, no addLogic):
+          hardware carton -> track bundle + springs
+        They run LAST, so nothing written after them can
+        overwrite their values.
+     6. nextPage()
+
+   Configurator.js only builds the context (getConfigureContext)
+   and saves INPUT_JSON – it does NOT call the EW controllers.
 ========================================================== */
 
 import { getSectionBundleValues } from "./sectionBundle";
-import { getGlazingCodeLogicValues } from "./glazingCodeLogic";
+import { getGlazingCodeLogicValues } from "./glazing";
 import { getSchedulingValues } from "./schedulingCode";
 import { writeEwValues } from "./ewSync";
+
+// Set to false to switch off the configure logs
+const CONFIGURE_DEBUG = true;
 
 /* ----------------------------------------------------------
    REACT DRIVERS
@@ -43,39 +53,9 @@ const CONFIGURE_DRIVERS = [
     }
 ];
 
-/* ----------------------------------------------------------
-   GLOBAL DRIVERS (global product code, not React)
-   Called by name on window, after React values are written.
----------------------------------------------------------- */
-
-const GLOBAL_DRIVERS = [
-    "addHardwareDrivers",
-    "addTrackDrivers",
-    "addOperatorEvents"
-];
-
-async function runGlobalDrivers() {
-
-    for (const name of GLOBAL_DRIVERS) {
-
-        const fn = window[name];
-
-        if (typeof fn !== "function") {
-            console.warn(`Configure: global driver ${name}() not found.`);
-            continue;
-        }
-
-        try {
-            await fn();
-        } catch (err) {
-            throw new Error(`Global driver "${name}" failed: ${err.message}`);
-        }
-    }
-}
-
 export async function buildConfigureValues(ctx) {
 
-    // Live values (glazing codes, door face / glazing price) go first
+    // Live values (glazing codes, door face / glazing price ...) go first
     let values = { ...ctx.liveValues };
 
     for (const driver of CONFIGURE_DRIVERS) {
@@ -93,6 +73,36 @@ export async function buildConfigureValues(ctx) {
     }
 
     return values;
+}
+
+/* ----------------------------------------------------------
+   EW CONTROLLERS (shared global files in EW)
+   HARDWARE_CARTON_CONTROLLER.js / TRACK_BUNDLE_CONTROLLER.js
+
+   ctx.hardwareCarton / ctx.trackBundle:
+     object -> run with that input
+     null   -> clear (Assembled / Raw panel / no hardware set)
+---------------------------------------------------------- */
+
+async function runEwControllers(ctx) {
+
+    // Hardware carton
+    if (typeof window.runHardwareCarton !== "function") {
+        console.warn("Configure: HARDWARE_CARTON_CONTROLLER.js is not loaded in EW.");
+    } else if (ctx.hardwareCarton) {
+        window.runHardwareCarton(ctx.hardwareCarton);
+    } else {
+        window.clearHardwareCarton?.();
+    }
+
+    // Track bundle + springs (spring API call -> async)
+    if (typeof window.runTrackBundle !== "function") {
+        console.warn("Configure: TRACK_BUNDLE_CONTROLLER.js is not loaded in EW.");
+    } else if (ctx.trackBundle) {
+        await window.runTrackBundle(ctx.trackBundle);
+    } else {
+        window.clearTrackBundle?.();
+    }
 }
 
 /* ----------------------------------------------------------
@@ -116,18 +126,25 @@ export async function runConfigure(getContext) {
 
     try {
 
-        const values = await buildConfigureValues(getContext());
+        // Built ONCE – drivers and controllers use the same snapshot
+        const ctx = getContext();
 
+        // 3. React drivers
+        const values = await buildConfigureValues(ctx);
+
+        // 4. React values -> EW
         const missing = writeEwValues(values);
-
-        if (missing.length) {
-            console.warn("Configure: EW inputs not found:", missing);
-        }
 
         window.EW_VALUES = values;
 
-        // await runGlobalDrivers();
+        if (CONFIGURE_DEBUG && missing.length) {
+            console.info("Configure: React-only ids (no EW input):", missing);
+        }
 
+        // 5. EW controllers last
+        await runEwControllers(ctx);
+
+        // 6. Next page
         if (typeof window.nextPage === "function") {
             window.nextPage();
         } else {

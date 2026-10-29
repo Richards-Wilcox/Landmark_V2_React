@@ -1,7 +1,6 @@
 import {
-    getFaceDesc,
     isSpecialFace
-} from "../Canvas/canvasWindowLayout";
+} from "../Canvas/canvasLayout";
 
 const POSITIONS = [
     { value: "top", label: "Top" },
@@ -24,43 +23,83 @@ function WindowPosition({
 
     const shape = glassShape || "";
 
-    const face = getFaceDesc(panelStyle);
+    const isSlim =
+        shape.includes("slim");
 
-    const isFlush = face === "flush" || face === "plank";
-    const isSlim = shape.includes("slim");
-    const isGrand = shape.includes("grand");
+    const isGrand =
+        shape.includes("grand");
 
-    /* Special / Grand: only TOP allowed */
+    /*
+     * Special / Grand:
+     * - Top remains enabled
+     * - All other options remain visible
+     * - All other options are disabled / greyed out
+     *
+     * Keep this existing special-case behavior.
+     */
     const isLocked =
         !isSlim &&
-        (isGrand || isSpecialFace(panelStyle, shape));
+        (
+            isGrand ||
+            isSpecialFace(
+                panelStyle,
+                shape
+            )
+        );
 
-    /* What is shown as selected.
-       Non-flush custom: windowPosition stays "custom",
-       but no visible button is highlighted. */
-    let selected = shape ? windowPosition : "";
+    /*
+     * Selected position:
+     * - no glass shape -> nothing selected
+     * - Grand / special face -> Top is always selected
+     * - otherwise use the selected window position
+     */
+    const selected =
+        isLocked
+            ? "top"
+            : shape
+                ? windowPosition
+                : "";
 
-    if (isLocked) {
-        selected = "top";
-    }
+    const isVisible = value => {
 
-    const isVisible = (value) => {
-
-        // Slim windows: TOP is hidden
+        /*
+         * Slim windows:
+         * Top stays hidden.
+         */
         if (value === "top") {
             return !isSlim;
         }
 
-        // Custom button: Flush / Plank and Slim only
-        if (value === "custom") {
-            return (isFlush || isSlim) && !isLocked;
-        }
-
+        /*
+         * Custom is now visible for every face style.
+         *
+         * Do not check Flush or Plank here.
+         * Grand / special cases still show Custom,
+         * but isDisabled() greys it out.
+         */
         return true;
     };
 
-    const isDisabled = (value) =>
-        isLocked && value !== "top";
+    const isDisabled = value => {
+
+        /*
+         * Grand / special case:
+         * only Top is selectable.
+         */
+        return (
+            isLocked &&
+            value !== "top"
+        );
+    };
+
+    const handlePositionClick = value => {
+
+        if (isDisabled(value)) {
+            return;
+        }
+
+        onPositionChange(value);
+    };
 
     return (
         <div className="window-position-wrapper">
@@ -72,34 +111,54 @@ function WindowPosition({
             <div className="window-position-buttons">
 
                 {POSITIONS
-                    .filter(position => isVisible(position.value))
+                    .filter(position =>
+                        isVisible(position.value)
+                    )
                     .map(position => {
 
+                        const {
+                            value,
+                            label
+                        } = position;
+
                         const isSelected =
-                            selected === position.value;
+                            selected === value;
 
                         const disabled =
-                            isDisabled(position.value);
+                            isDisabled(value);
 
                         const className = [
                             "door-size-button",
-                            isSelected ? "active" : "",
-                            disabled ? "disabled" : ""
-                        ].join(" ").trim();
+                            isSelected
+                                ? "active"
+                                : "",
+                            disabled
+                                ? "disabled"
+                                : ""
+                        ]
+                            .filter(Boolean)
+                            .join(" ");
 
                         return (
                             <button
-                                key={position.value}
+                                key={value}
                                 type="button"
                                 className={className}
                                 disabled={disabled}
+                                aria-pressed={isSelected}
                                 onClick={() =>
-                                    onPositionChange(position.value)
+                                    handlePositionClick(
+                                        value
+                                    )
                                 }
                             >
-                                {position.label}
+                                <span>
+                                    {label}
+                                </span>
 
-                                {renderSelectionIndicator(isSelected)}
+                                {renderSelectionIndicator?.(
+                                    isSelected
+                                )}
                             </button>
                         );
                     })}

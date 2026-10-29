@@ -689,17 +689,17 @@ body.rw-react-fullpage table.table-layout {
     margin-bottom: 0;
 }
 
-/* Placeholder sections (Hardware / Operator / ... Bootstrap Card) */
-#react-root .config-card__body>.card {
+/* Placeholder sections (Bootstrap Card) */
+#react-root .config-card__body > .card {
     border: none;
     margin-bottom: 0 !important;
 }
 
-#react-root .config-card__body>.card .card-body {
+#react-root .config-card__body > .card .card-body {
     padding: 0;
 }
 
-#react-root .config-card__body>.card h3 {
+#react-root .config-card__body > .card h3 {
     margin: 0;
     font-size: 14px;
     font-weight: 500;
@@ -1147,6 +1147,7 @@ body.rw-react-fullpage table.table-layout {
     width: 50%;
 }
 
+
 /* ==========================================
    12. SEGMENTED TOGGLE (Number of Windows)
 ========================================== */
@@ -1513,8 +1514,9 @@ body.rw-react-fullpage table.table-layout {
     }
 }
 
+
 /* ==========================================
-   HARDWARE SECTION  
+   15. HARDWARE SECTION
 ========================================== */
 
 /* ---------- Rows ---------- */
@@ -1531,8 +1533,7 @@ body.rw-react-fullpage table.table-layout {
     grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr);
 }
 
-/* Columns inside a row: spacing comes from the row
-   (the :last-child rule in section 6 removed it before) */
+/* Columns inside a row: spacing comes from the row */
 #react-root .config-card__body .hw-row > .landmark-section {
     margin-bottom: 0;
 }
@@ -1737,8 +1738,698 @@ body.rw-react-fullpage table.table-layout {
     color: #6b6d70;
 }
 
+
 /* ==========================================
-    RESPONSIVE
+   16. OPERATOR SECTION
+   Same flat layout as Door Model / Hardware:
+   no inner cards, no inner header – the card
+   title already says "Operator".
+========================================== */
+
+/* Card header already says "Operator" */
+
+#react-root .operator-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin: 0 0 20px;
+    padding: 0;
+    border: none;
+    background: transparent;
+}
+
+/* Label above the carousel – same style as "Operator Bracket Mount" */
+#react-root .operator-select-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+#react-root .operator-select-header .landmark-section-header {
+    margin: 0;
+}
+
+#react-root .operator-select-count {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b6d70;
+}
+
+/* ---------- Carousel ---------- */
+
+#react-root .operator-carousel-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+}
+
+/* Round arrows, light border */
+#react-root .operator-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border: 1px solid #D9D9D9;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+#react-root .operator-arrow:hover {
+    background: #E4E4E4;
+}
+
+/* The SVG has no size of its own – without this it fills the card */
+#react-root .operator-arrow svg {
+    width: 16px;
+    height: 16px;
+    fill: #333;
+}
+
+/* Narrow slide window, so the image is tall instead of wide */
+#react-root .carousel-container-slide {
+    flex: 0 1 320px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* transform / transition are set inline by the component */
+#react-root #operator-carousel-container {
+    display: flex;
+}
+
+#react-root .carousel-operator-item {
+    flex: 0 0 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+}
+
+/* Tall white image area – no panel, no border */
+#react-root .carousel-operator-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 220px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    overflow: hidden;
+}
+
+#react-root .carousel-operator-image img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+#react-root .carousel-operator-item h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+    text-align: center;
+}
+
+/* ---------- Dots ---------- */
+
+#react-root .operator-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+#react-root button.operator-dot {
+    width: 10px;
+    min-width: 10px;
+    height: 10px;
+    padding: 0;
+    border-radius: 50%;
+    background: #D9D9D9;
+    cursor: pointer;
+    transition: background .2s ease;
+}
+
+#react-root button.operator-dot:hover {
+    background: #999;
+}
+
+#react-root button.operator-dot.operator-dot-active {
+    background: #000;
+}
+
+/* ---------- Bracket + accessories: plain sections ---------- */
+
+#react-root .operator-accessories {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+#react-root .operator-accessory-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+/* Bracket mount: two equal buttons, full width */
+#react-root .operator-accessory-card .door-model-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 0;
+}
+
+/* ---------- Bracket mount block: full width ---------- */
+
+#react-root .operator-accessory-card .horizontal-inputs {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto !important;
+}
+
+#react-root .operator-accessory-card .image-input-cell {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto !important;
+}
+
+/* ---------- Accessory rows only: dropdown + Qty max 380px ---------- */
+
+#react-root .operator-accessory-card .horizontal-inputs--quantity {
+    flex: 1 1 auto;
+}
+
+/* Accessory dropdown takes the space, Qty stays 80px */
+#react-root .horizontal-inputs--quantity .image-input-cell:first-child {
+    flex: 1 1 auto;
+}
+
+#react-root .horizontal-inputs--quantity .image-input-cell:last-child {
+    flex: 0 0 80px;
+}
+
+#react-root .operator-accessory-card h3.config-option-label-style {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 20px;
+    color: #333;
+}
+
+#react-root .operator-accessory-card select {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 35px;
+    margin: 0;
+    padding: 0 10px;
+    border: 1px solid #999;
+    border-radius: 8px;
+    background: #fff;
+    color: #222;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+    box-shadow: none;
+    cursor: pointer;
+}
+
+#react-root .operator-accessory-card select:hover:not(:disabled) {
+    background: #E4E4E4;
+}
+
+#react-root .operator-accessory-card select:focus {
+    outline: none;
+    border-color: #333;
+}
+
+#react-root .operator-accessory-card select:disabled {
+    background: #f5f5f5;
+    border-color: #ddd;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+/* ---------- Accessory image (96px) ---------- */
+
+#react-root .image-placeholder-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 110px;
+    width: 110px;
+    height: 110px;
+    padding: 8px;
+    border-radius: 12px;
+    background: #f4f4f5;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+#react-root .image-placeholder-container .rw-image-input-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    mix-blend-mode: multiply;
+}
+
+/* Nothing selected: same grey tile, faded image icon */
+#react-root .image-placeholder-container.empty {
+    background: #f7f7f8;
+}
+
+#react-root .image-placeholder-icon {
+    width: 34px;
+    height: 34px;
+    fill: #c4c5c7;
+}
+
+
+/* ==========================================
+   17. ADVANCED SECTION
+========================================== */
+
+/* The card header already says "Advanced" */
+#react-root .advanced-section .advanced-heading {
+    display: none;
+}
+
+#react-root .advanced-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Two columns: pairs side by side, a single item = half width */
+#react-root .advanced-control-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+
+/* Colour selector inside Advanced: spacing comes from the group gap */
+#react-root .advanced-group > .landmark-section {
+    margin-bottom: 0;
+}
+
+/* ---------- Switches (same as Hardware "Inclined Track") ---------- */
+
+#react-root .advanced-switch-field {
+    margin-bottom: 0;
+    min-width: 0;
+}
+
+/* Same label height as the select / stepper labels,
+   so switches and inputs line up in one row */
+#react-root .advanced-switch-field .landmark-section-header {
+    min-height: 20px;
+    margin: 0 0 8px;
+    padding: 0;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 20px;
+    color: #333;
+}
+
+/* Full column width (also set in section 15 – kept here for safety) */
+#react-root .advanced-switch-field .segmented-toggle {
+    width: 100%;
+}
+
+#react-root .advanced-switch-field .segmented-option {
+    user-select: none;
+}
+
+#react-root .advanced-switch-field .segmented-option:not(.active):hover {
+    background: #E4E4E4;
+}
+
+#react-root .advanced-switch-field .segmented-option:focus-visible {
+    outline: 2px solid #333;
+    outline-offset: -2px;
+}
+
+/* ---------- Radio groups (Snap Latch / Decorative Hardware) ---------- */
+
+#react-root fieldset.advanced-fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+#react-root fieldset.advanced-fieldset legend {
+    display: block;
+    float: none;
+    width: auto;
+    margin: 0 0 8px;
+    padding: 0;
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 20px;
+    color: #333;
+}
+
+/* All options in one row, equal width */
+#react-root .advanced-choices {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 8px;
+}
+
+/* Snap Latch: same width as a half column */
+#react-root .advanced-choices--compact {
+    max-width: calc(50% - 8px);
+}
+
+#react-root .advanced-control-row .advanced-choices--compact {
+    max-width: none;
+}
+
+#react-root label.advanced-choice {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 35px;
+    margin: 0;
+    padding: 0 28px 0 10px;
+    border: 1px solid #999;
+    border-radius: 10px;
+    background: #fff;
+    color: #222;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.2;
+    text-align: center;
+    box-sizing: border-box;
+    cursor: pointer;
+    user-select: none;
+    transition: all .15s ease;
+}
+
+/* Real radio stays in the DOM (keyboard / form), but hidden */
+#react-root label.advanced-choice input[type="radio"] {
+    position: absolute;
+    width: 0;
+    height: 0;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#react-root label.advanced-choice:hover {
+    background: #E4E4E4;
+}
+
+#react-root label.advanced-choice.selected {
+    background: #D9D9D9;
+    border-color: #333;
+    font-weight: 700;
+}
+
+#react-root label.advanced-choice.disabled,
+#react-root label.advanced-choice.disabled:hover {
+    background: #f5f5f5;
+    border-color: #ccc;
+    color: #b3b3b3;
+    cursor: not-allowed;
+}
+
+/* Outline only for keyboard focus – not after a mouse click */
+#react-root label.advanced-choice:has(input:focus-visible) {
+    outline: 2px solid #333;
+    outline-offset: 1px;
+}
+
+/* ---------- Select fields ---------- */
+
+#react-root .advanced-select-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+#react-root .advanced-select-field > span,
+#react-root .advanced-select-field > label {
+    margin: 0 0 8px;
+    padding: 0;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 20px;
+    color: #333;
+}
+
+#react-root .advanced-select-field select {
+    width: 100%;
+    height: 35px;
+    margin: 0;
+    padding: 0 10px;
+    border: 1px solid #999;
+    border-radius: 8px;
+    background: #fff;
+    color: #222;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+    box-shadow: none;
+    cursor: pointer;
+}
+
+#react-root .advanced-select-field select:hover:not(:disabled) {
+    background: #E4E4E4;
+}
+
+#react-root .advanced-select-field select:focus {
+    outline: none;
+    border-color: #333;
+}
+
+#react-root .advanced-select-field select:disabled {
+    background: #f5f5f5;
+    border-color: #ddd;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+/* ---------- Quantity stepper (Door Studs / Magnetic Set) ---------- */
+
+#react-root .quantity-stepper {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    height: 35px;
+    border: 1px solid #999;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+#react-root .quantity-stepper button {
+    flex: 0 0 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 100%;
+    background: #f5f5f5;
+    color: #222;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#react-root .quantity-stepper button:hover:not(:disabled) {
+    background: #E4E4E4;
+}
+
+#react-root .quantity-stepper button:disabled {
+    color: #bbb;
+    cursor: not-allowed;
+}
+
+#react-root .quantity-stepper input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: none !important;
+    border-left: 1px solid #ddd !important;
+    border-right: 1px solid #ddd !important;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none !important;
+    outline: none;
+    color: #222;
+    font-size: 14px;
+    font-family: inherit;
+    text-align: center;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+#react-root .quantity-stepper input::-webkit-outer-spin-button,
+#react-root .quantity-stepper input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* ---------- Decorative hardware cards ---------- */
+
+/* Individual Components: rows stacked */
+#react-root .advanced-accessory-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 14px;
+    border: 1px solid #e3e4e5;
+    border-radius: 12px;
+    background: #fff;
+}
+
+/* Full Sets / Magnetic Set: select + qty side by side */
+#react-root .advanced-accessory-card--compact {
+    flex-direction: row;
+    align-items: flex-end;
+}
+
+#react-root .advanced-accessory-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+}
+
+#react-root .advanced-accessory-controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Main select takes the space, qty stays narrow */
+#react-root .advanced-accessory-card--compact > .advanced-select-field:first-child,
+#react-root .advanced-accessory-controls > .advanced-select-field:first-child {
+    flex: 1 1 auto;
+}
+
+#react-root .advanced-accessory-card--compact > :last-child:not(:first-child),
+#react-root .advanced-accessory-controls > .advanced-select-field:last-child:not(:first-child) {
+    flex: 0 0 110px;
+}
+
+/* Magnetic Set qty stepper needs a bit more room */
+#react-root .advanced-accessory-card--compact > .advanced-select-field:last-child:has(.quantity-stepper) {
+    flex: 0 0 150px;
+}
+
+/* ---------- Decorative hardware rows with image ---------- */
+
+/* Image + (select, qty) – image centred against the inputs */
+#react-root .advanced-accessory-row--image {
+    align-items: center;
+}
+
+/* Full Sets card: image + select + qty in one row */
+#react-root .advanced-accessory-card--compact.advanced-accessory-row--image {
+    align-items: center;
+}
+
+#react-root .advanced-accessory-row--image .advanced-accessory-controls {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+/* Magnetic Set qty stepper next to the select */
+#react-root .advanced-accessory-controls > .advanced-select-field:last-child:has(.quantity-stepper) {
+    flex: 0 0 130px;
+}
+
+#react-root .advanced-accessory-controls > .advanced-select-field:last-child:has(.hw-qty) {
+    flex: 0 0 130px;
+}
+/* ==========================================
+   18. ANNOTATIONS SECTION
+========================================== */
+
+/* The card header already says "Annotations" */
+#react-root .annotations-section > h3 {
+    display: none;
+}
+
+#react-root .annotation-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+#react-root .annotation-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+#react-root .annotation-field label {
+    margin: 0 0 8px;
+    padding: 0;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 20px;
+    color: #333;
+}
+
+#react-root .annotation-field input[type="text"] {
+    width: 100%;
+    height: 35px;
+    margin: 0;
+    padding: 0 10px;
+    border: 1px solid #999;
+    border-radius: 8px;
+    background: #fff;
+    color: #222;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+    box-shadow: none;
+}
+
+#react-root .annotation-field input[type="text"]:focus {
+    outline: none;
+    border-color: #333;
+}
+
+
+/* ==========================================
+   19. RESPONSIVE
 ========================================== */
 
 @media (min-width: 2200px) {
@@ -1837,5 +2528,51 @@ body.rw-react-fullpage table.table-layout {
     #react-root .hw-row,
     #react-root .hw-row.three {
         grid-template-columns: 1fr;
+    }
+
+    /* Operator */
+    #react-root .carousel-operator-image {
+        height: 180px;
+    }
+
+    #react-root .operator-carousel-wrapper {
+        gap: 10px;
+    }
+
+    #react-root .operator-accessory-card {
+        flex-wrap: wrap;
+    }
+
+    #react-root .operator-accessory-card .horizontal-inputs--quantity {
+        flex: 1 1 auto;
+    }
+
+    #react-root .image-placeholder-container {
+        flex-basis: 80px;
+        width: 80px;
+        height: 80px;
+    }
+
+    /* Advanced / Annotations */
+    #react-root .advanced-control-row,
+    #react-root .annotation-fields {
+        grid-template-columns: 1fr;
+    }
+
+    #react-root .advanced-choices--compact {
+        max-width: none;
+    }
+
+    #react-root .advanced-accessory-card--compact,
+    #react-root .advanced-accessory-row,
+    #react-root .advanced-accessory-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #react-root .advanced-accessory-card--compact > :last-child:not(:first-child),
+    #react-root .advanced-accessory-controls > .advanced-select-field:last-child:not(:first-child),
+    #react-root .advanced-accessory-row > .advanced-select-field {
+        flex: 1 1 auto;
     }
 }

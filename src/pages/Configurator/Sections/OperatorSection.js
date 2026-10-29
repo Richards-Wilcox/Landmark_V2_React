@@ -1,373 +1,357 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+
 import {
-    IoIosArrowBack,
-    IoIosArrowForward
-} from "react-icons/io";
-import AccessoryImageTile from "../../../components/AccessoryImageTile";
+    OPERATOR_OPTIONS,
+    OPERATOR_BRACKETS,
+    OPERATOR_ACCESSORIES,
+    DEFAULT_OPERATOR,
+    getOperatorImageUrl,
+    applyAccessoryChange
+} from "../../../Data/operatorData";
 
-const operatorOptions = [
-    {
-        id: "operator_none",
-        name: "None",
-        value: "PS",
-        image: "Operators_none.png",
-        maxDoorHeight: 1000,
-        isHiLiftCompatible: true
-    },
-    {
-        id: "operator_jackshaft",
-        name: "98022 - Jackshaft",
-        value: "951-185",
-        image: "EW-LM-8500W.jpg",
-        maxDoorHeight: 168,
-        isHiLiftCompatible: true
-    },
-    {
-        id: "6580L_Belt",
-        name: "6580L - Belt",
-        value: "OP_6580L_VALUE",
-        image: "6580L-(951-193)_E-Cat.png",
-        maxDoorHeight: 120,
-        isHiLiftCompatible: false
-    },
-    {
-        id: "6590L_Belt",
-        name: "6690L - Belt",
-        value: "OP_6590L_VALUE",
-        image: "6690L-(951-194)_E-Cat.png",
-        maxDoorHeight: 120,
-        isHiLiftCompatible: false
-    },
-    {
-        id: "2220L_Chain",
-        name: "2220L - Chain",
-        value: "OP_2220L_CHAIN_VALUE",
-        image: "2220L-(951-190)_E-Cat.png",
-        maxDoorHeight: 120,
-        isHiLiftCompatible: false
-    },
-    {
-        id: "2420L_Chain",
-        name: "2420L - Chain",
-        value: "OP_2420L_CHAIN_VALUE",
-        image: "2420L-(951-191)_E-Cat.png",
-        maxDoorHeight: 120,
-        isHiLiftCompatible: false
-    }
+import { toggleValue } from "../../../utils/toggleValue";
+
+
+/* ==========================================================
+   OPERATOR SECTION (port of LOAD_HTML.js #OPERATOR_OPTIONS)
+
+   Carousel = old populateCarousel():
+   - one clone of the last slide in front, one clone of the
+     first slide at the end
+   - position 1..n = real slides, slide moves with translateX
+   - after sliding onto a clone it jumps (no animation) to the
+     real slide -> infinite loop
+========================================================== */
+
+const COUNT = OPERATOR_OPTIONS.length;
+
+// [last clone, ...real slides, first clone]
+const SLIDES = [
+    OPERATOR_OPTIONS[COUNT - 1],
+    ...OPERATOR_OPTIONS,
+    OPERATOR_OPTIONS[0]
 ];
 
-const operatorAccessoryOptions = [
-    {
-        name: "ADDITIONAL_TRANSMITTER",
-        label: "Additional Transmitter",
-        quantityOptions: ["1", "2", "3", "4"],
-        options: [
-            ["952-232", "L993M", "L991S-(952-230)_E-Cat.png"],
-            ["952-233", "L993S", "L993S-(952-233)_E-Cat.png"],
-            ["952-231", "L992U", "L992U-(952-231)_E-Cat.png"],
-            ["952-229", "L932M", "L932M-(952-229)_E-Cat.png"],
-            ["952-230", "L991S", "L991S-(952-230)_E-Cat.png"]
-        ]
-    },
-    {
-        name: "ADDITIONAL_CONTROL_PANEL",
-        label: "Additional Control Panel",
-        quantityOptions: ["1", "2"],
-        options: [
-            ["952-227", "L957W", "L957W (952-227)_E-Cat.png"],
-            ["952-228", "L958W", "L958W-(952-228)_E-Cat.png"],
-            ["952-225", "L955W", "L955W-(952-225)_E-Cat.png"],
-            ["952-226", "L956W", "L956W-(952-226)_E-Cat.png"]
-        ]
-    },
-    {
-        name: "ADDITIONAL_KEYLESS_ENTRY",
-        label: "Additional Keyless Entry",
-        quantityOptions: ["1", "2", "3"],
-        options: [
-            ["952-234", "L979M", "L979M-(952-234)_E-Cat.png"],
-            ["952-235", "L979S", "L979S-(952-235)_E-Cat.png"],
-            ["952-236", "L979U", "L979U-(952-236)_E-Cat.png"]
-        ]
-    }
-];
+const toDataIndex = (position) => ((position - 1) % COUNT + COUNT) % COUNT;
 
-const operatorImageDirectory =
-    `${process.env.PUBLIC_URL}/images/operators/`;
+const positionFromValue = (value) =>
+    Math.max(0, OPERATOR_OPTIONS.findIndex(option => option.value === value)) + 1;
 
-function OperatorProductImage({
-    operator
-}) {
-    const [imageUnavailable, setImageUnavailable] =
-        useState(false);
+/* Image with the old retry (5 x 1s), hidden if it still fails */
+function OperatorImage({ file }) {
+
+    const [attempt, setAttempt] = useState(0);
+    const [hidden, setHidden] = useState(!file);
+    const timer = useRef(null);
+
+    useEffect(() => () => clearTimeout(timer.current), []);
+
+    const url = getOperatorImageUrl(file);
+
+    const handleError = () => {
+        if (attempt < 5) {
+            timer.current = setTimeout(() => setAttempt(a => a + 1), 1000);
+        } else {
+            setHidden(true);
+        }
+    };
 
     return (
-        <div className="operator-carousel-image">
-            {imageUnavailable ? (
-                <div className="operator-image-unavailable">
-                    Operator image unavailable
-                </div>
-            ) : (
+        <div className="carousel-operator-image">
+            {url && (
                 <img
-                    src={`${operatorImageDirectory}${encodeURIComponent(operator.image)}`}
-                    alt={operator.name}
-                    onError={() => setImageUnavailable(true)}
+                    src={attempt ? `${url}?retry=${attempt}` : url}
+                    alt=""
+                    style={{ visibility: hidden ? "hidden" : "visible" }}
+                    onLoad={() => setHidden(false)}
+                    onError={handleError}
                 />
             )}
         </div>
     );
 }
 
-function OperatorSection({
-    operatorValue,
-    setOperatorValue,
-    operatorBracket,
-    setOperatorBracket,
-    operatorAccessories,
-    setOperatorAccessories,
-    trussQuantity,
-    renderSelectionIndicator
-}) {
-    const activeIndex = Math.max(
-        0,
-        operatorOptions.findIndex(
-            option => option.value === operatorValue
-        )
-    );
-    const operator = operatorOptions[activeIndex];
-    const hasTruss = trussQuantity > 0;
+/* Accessory image – icon placeholder when nothing is selected */
+function AccessoryImage({ file }) {
 
-    const selectOperator = index => {
-        const wrappedIndex =
-            (index + operatorOptions.length) % operatorOptions.length;
+    const [failed, setFailed] = useState(false);
 
-        setOperatorValue(operatorOptions[wrappedIndex].value);
-    };
+    useEffect(() => setFailed(false), [file]);
 
-    const updateAccessory = (name, value) => {
-        setOperatorAccessories(previous => ({
-            ...previous,
-            [name]: value,
-            [`${name}_QTY`]:
-                value === "NONE"
-                    ? "0"
-                    : "1"
-        }));
-    };
-
-    const updateAccessoryQuantity = (name, value) => {
-        setOperatorAccessories(previous => ({
-            ...previous,
-            [name]: value
-        }));
-    };
+    const showImage = !!file && !failed;
 
     return (
-        <section
-            className="operator-section"
-            aria-labelledby="operator-heading"
+        <div
+            className={
+                showImage
+                    ? "image-placeholder-container"
+                    : "image-placeholder-container empty"
+            }
         >
-            <div className="operator-card">
-                <header className="operator-header">
-                    <div className="operator-icon" aria-hidden="true">
-                        ⚡
-                    </div>
-                    <div>
-                        <h2 id="operator-heading">Operator</h2>
-                        <p>Select and configure your operator system</p>
-                    </div>
-                </header>
-
-                <input
-                    type="hidden"
-                    name="OPERATOR"
-                    value={operator.value}
-                    data-max-door-height={operator.maxDoorHeight}
-                    data-is-hi-lift-compatible={operator.isHiLiftCompatible}
-                    readOnly
+            {showImage ? (
+                <img
+                    className="rw-image-input-img"
+                    src={getOperatorImageUrl(file)}
+                    alt=""
+                    onError={() => setFailed(true)}
                 />
+            ) : (
+                <svg
+                    className="image-placeholder-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                >
+                    <path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4.86 8.86-3 3.87L9 13.14 6 17h12l-3.86-5.14z" />
+                </svg>
+            )}
+        </div>
+    );
+}
 
-                <div className="operator-carousel-wrapper">
-                    <button
-                        type="button"
-                        className="operator-arrow"
-                        aria-label="Previous operator"
-                        onClick={() => selectOperator(activeIndex - 1)}
-                    >
-                        <IoIosArrowBack />
-                    </button>
-                    <div
-                        className="operator-carousel-slide"
-                        aria-live="polite"
-                    >
-                        <OperatorProductImage
-                            key={operator.id}
-                            operator={operator}
-                        />
-                        <h3>{operator.name}</h3>
+function OperatorSection({
+    operator = DEFAULT_OPERATOR,
+    onChange = () => { },
+    renderSelectionIndicator
+}) {
+
+    const values = { ...DEFAULT_OPERATOR, ...operator };
+
+    /* ---------- Carousel ---------- */
+
+    const [position, setPosition] = useState(() => positionFromValue(values.operator));
+    const [animate, setAnimate] = useState(true);
+
+    // Restored / changed from outside -> jump without animation
+    useEffect(() => {
+        const current = OPERATOR_OPTIONS[toDataIndex(position)].value;
+        if (current !== values.operator) {
+            setAnimate(false);
+            setPosition(positionFromValue(values.operator));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [values.operator]);
+
+    // Turn animation back on after a jump
+    useEffect(() => {
+        if (animate) return undefined;
+        const frame = requestAnimationFrame(() => setAnimate(true));
+        return () => cancelAnimationFrame(frame);
+    }, [animate]);
+
+    const goTo = (nextPosition) => {
+        setAnimate(true);
+        setPosition(nextPosition);
+        onChange({ operator: OPERATOR_OPTIONS[toDataIndex(nextPosition)].value });
+    };
+
+    // Old indexCorrectionList(): clone -> real slide
+    const handleTransitionEnd = () => {
+        if (position > COUNT) {
+            setAnimate(false);
+            setPosition(1);
+        } else if (position < 1) {
+            setAnimate(false);
+            setPosition(COUNT);
+        }
+    };
+
+    const activeDot = toDataIndex(position);
+
+    /* ---------- Bracket ---------- */
+
+    // Same as Glazing: clicking the selected bracket clears it
+    
+    const handleBracket = (value) => {
+        toggleValue(values.bracket, value, bracket => onChange({ bracket }));
+    };
+
+    /* ---------- Render ---------- */
+
+    return (
+        <>
+            <div className="operator-card">
+
+                <div className="operator-select-header">
+                    <div className="landmark-section-header">
+                        Operator Model
                     </div>
-                    <button
-                        type="button"
-                        className="operator-arrow"
-                        aria-label="Next operator"
-                        onClick={() => selectOperator(activeIndex + 1)}
-                    >
-                        <IoIosArrowForward />
-                    </button>
+                    <span className="operator-select-count">
+                        {activeDot + 1} / {OPERATOR_OPTIONS.length}
+                    </span>
                 </div>
 
-                <div className="operator-pagination" aria-label="Choose operator">
-                    {operatorOptions.map((option, index) => (
+                <div className="operator-carousel-wrapper">
+
+                    <div
+                        className="operator-arrow"
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Previous operator"
+                        onClick={() => goTo(position - 1)}
+                        onKeyDown={e => e.key === "Enter" && goTo(position - 1)}
+                    >
+                        <svg viewBox="0 0 640 640">
+                            <path d="M406.7 105.3C394.2 92.8 373.9 92.8 361.4 105.3L169.4 297.3C156.9 309.8 156.9 330.1 169.4 342.6L361.4 534.6C373.9 547.1 394.2 547.1 406.7 534.6C419.2 522.1 419.2 501.8 406.7 489.3L237.3 320L406.7 150.7C419.2 138.2 419.2 117.8 406.7 105.3Z" />
+                        </svg>
+                    </div>
+
+                    <div className="carousel-container-slide">
+                        <div
+                            id="operator-carousel-container"
+                            style={{
+                                transform: `translateX(-${position * 100}%)`,
+                                transition: animate ? "transform 0.3s ease" : "none"
+                            }}
+                            onTransitionEnd={handleTransitionEnd}
+                        >
+                            {SLIDES.map((option, index) => (
+                                <div
+                                    key={`${option.id}-${index}`}
+                                    className={
+                                        index === position
+                                            ? "carousel-operator-item active"
+                                            : "carousel-operator-item"
+                                    }
+                                >
+                                    <OperatorImage file={option.image} />
+                                    <h3>{option.name}</h3>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div
+                        className="operator-arrow"
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Next operator"
+                        onClick={() => goTo(position + 1)}
+                        onKeyDown={e => e.key === "Enter" && goTo(position + 1)}
+                    >
+                        <svg viewBox="0 0 640 640">
+                            <path d="M233.3 534.6C245.8 547.1 266.1 547.1 278.6 534.6L470.6 342.6C483.1 330.1 483.1 309.8 470.6 297.3L278.6 105.3C266.1 92.8 245.8 92.8 233.3 105.3C220.8 117.8 220.8 138.2 233.3 150.7L402.7 320L233.3 489.3C220.8 501.8 220.8 522.1 233.3 534.6Z" />
+                        </svg>
+                    </div>
+
+                </div>
+
+                <div className="operator-pagination">
+                    {OPERATOR_OPTIONS.map((option, index) => (
                         <button
-                            type="button"
                             key={option.id}
+                            type="button"
+                            aria-label={`Select ${option.name}`}
                             className={
-                                index === activeIndex
+                                index === activeDot
                                     ? "operator-dot operator-dot-active"
                                     : "operator-dot"
                             }
-                            aria-label={`Select ${option.name}`}
-                            aria-pressed={index === activeIndex}
-                            onClick={() => selectOperator(index)}
+                            onClick={() => goTo(index + 1)}
                         />
                     ))}
                 </div>
+
             </div>
 
             <div className="operator-accessories">
+
+                {/* ---------- Operator Bracket Mount ---------- */}
+
                 <div className="operator-accessory-card">
-                    <fieldset className="operator-bracket-fieldset">
-                        <legend>Operator Bracket Mount</legend>
-                        {!hasTruss && (
-                            <p className="operator-bracket-hint">
-                                This option requires a truss. Select Extra Truss
-                                in the Advanced tab to enable it.
-                            </p>
-                        )}
-                        <div className="operator-bracket-options operator-bracket-options--compact">
-                            {[
-                                ["ADJUSTABLE_BRACKET", "Adjustable Bracket"],
-                                ["CLAW_BRACKET", "Claw Bracket"]
-                            ].map(([value, label]) => (
-                                <label
-                                    className={
-                                        [
-                                            "advanced-choice",
-                                            operatorBracket === value
-                                                ? "selected"
-                                                : "",
-                                            !hasTruss
-                                                ? "disabled"
-                                                : ""
-                                        ].filter(Boolean).join(" ")
-                                    }
-                                    key={value}
-                                >
-                                    <input
-                                        type="radio"
-                                        name="OPERATOR_BRACKET"
-                                        value={value}
-                                        checked={operatorBracket === value}
-                                        disabled={!hasTruss}
-                                        onChange={() =>
-                                            setOperatorBracket(value)
-                                        }
-                                    />
-                                    <span>{label}</span>
-                                    {renderSelectionIndicator?.(
-                                        operatorBracket === value
-                                    )}
-                                </label>
-                            ))}
+                    <div className="horizontal-inputs" style={{ width: "100%" }}>
+                        <div className="image-input-cell" style={{ width: "100%" }}>
+                            <h3 className="config-option-label-style">
+                                Operator Bracket Mount
+                            </h3>
+                            <div className="door-model-buttons">
+                                {OPERATOR_BRACKETS.map(bracket => {
+                                    const isSelected = values.bracket === bracket.value;
+                                    return (
+                                        <div
+                                            key={bracket.value}
+                                            role="radio"
+                                            aria-checked={isSelected}
+                                            tabIndex={0}
+                                            className={
+                                                isSelected
+                                                    ? "door-model-button active"
+                                                    : "door-model-button"
+                                            }
+                                            onClick={() => handleBracket(bracket.value)}
+                                            onKeyDown={e => e.key === "Enter" && handleBracket(bracket.value)}
+                                        >
+                                            {bracket.label}
+                                            {renderSelectionIndicator?.(isSelected)}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </fieldset>
+                    </div>
                 </div>
 
-                {operatorAccessoryOptions.map(item => {
-                    const selectedValue =
-                        operatorAccessories[item.name];
-                    const selectedOption = item.options.find(
-                        ([value]) => value === selectedValue
-                    );
-                    const quantityName = `${item.name}_QTY`;
+                {/* ---------- Accessories ---------- */}
+
+                {OPERATOR_ACCESSORIES.map(item => {
+
+                    const selected = values[item.id] || "NONE";
+                    const qtyId = `${item.id}_QTY`;
+                    const isNone = selected === "NONE";
+                    const option = item.options.find(o => o.value === selected);
 
                     return (
-                        <div
-                            className="operator-accessory-card"
-                            key={item.name}
-                        >
-                            <AccessoryImageTile
-                                accessoryName={selectedOption?.[1]}
-                                imageFile={selectedOption?.[2]}
-                            />
-                            <div className="operator-accessory-controls">
-                                <label
-                                    className="advanced-select-field advanced-select-field--compact"
-                                    htmlFor={item.name}
-                                >
-                                    <span>{item.label}</span>
+                        <div className="operator-accessory-card" key={item.id}>
+
+                            <AccessoryImage file={option?.img} />
+
+                            <div
+                                className="horizontal-inputs horizontal-inputs--quantity"
+                                style={{ width: "75%" }}
+                            >
+                                <div className="image-input-cell">
+                                    <h3 className="config-option-label-style">
+                                        {item.label}
+                                    </h3>
                                     <select
-                                        id={item.name}
-                                        name={item.name}
-                                        value={selectedValue}
-                                        onChange={event =>
-                                            updateAccessory(
-                                                item.name,
-                                                event.target.value
-                                            )
+                                        id={`${item.id}_SELECT`}
+                                        style={{ width: "75%" }}
+                                        value={selected}
+                                        onChange={e =>
+                                            onChange(applyAccessoryChange({}, item.id, e.target.value))
                                         }
                                     >
-                                        <option value="NONE">NONE</option>
-                                        {item.options.map(
-                                            ([value, label]) => (
-                                                <option
-                                                    value={value}
-                                                    key={value}
-                                                >
-                                                    {label}
-                                                </option>
-                                            )
-                                        )}
-                                    </select>
-                                </label>
-                                <label
-                                    className="advanced-select-field"
-                                    htmlFor={quantityName}
-                                >
-                                    <span>Qty</span>
-                                    <select
-                                        id={quantityName}
-                                        name={quantityName}
-                                        value={
-                                            operatorAccessories[quantityName]
-                                        }
-                                        disabled={selectedValue === "NONE"}
-                                        onChange={event =>
-                                            updateAccessoryQuantity(
-                                                quantityName,
-                                                event.target.value
-                                            )
-                                        }
-                                    >
-                                        {selectedValue === "NONE" && (
-                                            <option value="0">0</option>
-                                        )}
-                                        {item.quantityOptions.map(quantity => (
-                                            <option
-                                                value={quantity}
-                                                key={quantity}
-                                            >
-                                                {quantity}
+                                        <option value="NONE">{item.noneLabel}</option>
+                                        {item.options.map(o => (
+                                            <option key={o.value} value={o.value}>
+                                                {o.label}
                                             </option>
                                         ))}
                                     </select>
-                                </label>
+                                </div>
+
+                                <div className="image-input-cell">
+                                    <h3 className="config-option-label-style">Qty</h3>
+                                    <select
+                                        id={`${qtyId}_SELECT`}
+                                        style={{ minWidth: 50 }}
+                                        disabled={isNone}
+                                        value={isNone ? "0" : (values[qtyId] || "1")}
+                                        onChange={e => onChange({ [qtyId]: e.target.value })}
+                                    >
+                                        {isNone && <option value="0">0</option>}
+                                        {item.quantities.map(q => (
+                                            <option key={q} value={q}>{q}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
+
                         </div>
                     );
                 })}
+
             </div>
-        </section>
+        </>
     );
 }
 

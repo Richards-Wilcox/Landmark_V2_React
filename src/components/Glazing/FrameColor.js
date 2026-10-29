@@ -6,7 +6,7 @@ import {
 } from "../../Data/colors";
 
 function FrameColor({
-
+    doorModel,
     glassShape,
 
     panelStyle,
@@ -19,11 +19,15 @@ function FrameColor({
 
 }) {
 
-    const isSlim =
-        glassShape?.includes("slim");
+    // const isSlim =
+    //     glassShape?.includes("slim");
+
+    const isClassicSlim =
+        doorModel === "A" &&
+        glassShape.includes("slim");
 
     const filteredAvailableColors =
-        isSlim
+        isClassicSlim
             ? [
                 ...availableColors.filter(
                     color =>
@@ -34,7 +38,7 @@ function FrameColor({
             : availableColors;
 
     const filteredOptionalColors =
-        isSlim
+        isClassicSlim
             ? []
             : optionalColors;
 

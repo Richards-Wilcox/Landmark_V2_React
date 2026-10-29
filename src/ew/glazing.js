@@ -1,22 +1,349 @@
 /* ==========================================================
-   GLAZING CODE LOGIC (runs on Configure)
-   Port of addGlazingCodeLogic() from GLAZING_CODES.js
+   GLAZING
+   All glazing codes in one file.
 
-   Needs the section bundle values (SB / SC part numbers,
-   BUNDLE*_SC*_HEIGHT, SECTION_0*, GLASS_QTY_*) and the live
-   glazing codes (WINDOW_1, INSERT_1, frames, SCREWS ...),
-   so it runs AFTER the section bundle driver.
+   1) LIVE PART CODES (run on every change)
+      Port of registerGlazingCalculationLogic() from
+      PRICE_CONTROLLER.js – the fields GLAZING_PRICE needs:
+      WINDOW_1/2, INSERT_1/2, EXTERIOR/INTERIOR_FRAME_1/2,
+      FRAME_KIT, SCREWS, INSERT_YES_NO, SLIM_YES_NO_FOR_FRAMES
+      -> getGlazingCodeValues()
 
-   Output:
-     DOOR_THICKNESS, WINDOW_1_QTY, WINDOW_2_QTY, CENTER_HINGE_QTY,
-     LITE_LOCATION, INSERT_1_QTY, INSERT_2_QTY,
-     SECTION_0x_SMARTCOM_CODE, GLZ_CODE_SECTION_0x,
-     CNC_SECTION_0x, PUNCH_CODE_SECTION_0x   (x = 1..9)
+   2) CONFIGURE CODES (run on Configure)
+      Port of addGlazingCodeLogic() from GLAZING_CODES.js.
+      Needs the section bundle values (SB / SC part numbers,
+      BUNDLE*_SC*_HEIGHT, SECTION_0*, GLASS_QTY_*) and the live
+      part codes above, so it runs AFTER the section bundle.
+      Output:
+        DOOR_THICKNESS, WINDOW_1_QTY, WINDOW_2_QTY, CENTER_HINGE_QTY,
+        LITE_LOCATION, INSERT_1_QTY, INSERT_2_QTY,
+        SECTION_0x_SMARTCOM_CODE, GLZ_CODE_SECTION_0x,
+        CNC_SECTION_0x, PUNCH_CODE_SECTION_0x   (x = 1..9)
+      -> getGlazingCodeLogicValues()
 ========================================================== */
 
 import { readEwValue } from "./ewSync";
-import { DESIGN_PATTERNS } from "./ewAttributes";
-import { getDrivenValues, computeValue } from "./drivenValues";
+
+import {
+    GLASS_TYPE_GLAZING,
+    INSERT_CODES,
+    DESIGN_PATTERNS,
+    getDrivenValues,
+    computeValue
+} from "./drivenValues";
+
+
+/* ##########################################################
+   1) LIVE PART CODES
+########################################################## */
+
+const GLASS_TYPE_COLONIAL = {
+    CLEAR: "004",
+    CLEAR_SINGLE: "005",
+    SATIN: "012",
+    OBSCURE_GLASS_PINHEAD: "006",
+    OBSCURE_GLASS_SINGLE: "007",
+    DARK_TINT_SEALED: "014",
+    DARK_TINT_SINGLE: "015",
+    BLACK_SATIN_SEALED: "016"
+};
+
+const GLASS_TYPE_RANCH = {
+    CLEAR: "504",
+    CLEAR_SINGLE: "505",
+    SATIN: "512",
+    OBSCURE_GLASS_PINHEAD: "506",
+    OBSCURE_GLASS_SINGLE: "507",
+    DARK_TINT_SEALED: "514",
+    DARK_TINT_SINGLE: "515",
+    BLACK_SATIN_SEALED: "516"
+};
+
+const GLASS_TYPE_COLONIAL_TEMP = {
+    CLEAR: "024",
+    CLEAR_SINGLE: "009",
+    OBSCURE_GLASS_PINHEAD: "026",
+    OBSCURE_GLASS_SINGLE: "027",
+    DARK_TINT_SEALED: "034",
+    DARK_TINT_SINGLE: "035"
+};
+
+const GLASS_TYPE_RANCH_TEMP = {
+    CLEAR: "524",
+    CLEAR_SINGLE: "509",
+    OBSCURE_GLASS_PINHEAD: "526",
+    OBSCURE_GLASS_SINGLE: "527",
+    DARK_TINT_SEALED: "534",
+    DARK_TINT_SINGLE: "535"
+};
+
+const L138_SINGLE_SLIM = { CLEAR: "54S-101", SATIN: "54S-111", BLACK_SATIN_SEALED: "54S-121" };
+const L138_DOUBLE_SLIM = { CLEAR: "54L-101", SATIN: "54L-111", BLACK_SATIN_SEALED: "54L-121" };
+const L200_SINGLE_SLIM = { CLEAR: "55S-201", SATIN: "55S-211", BLACK_SATIN_SEALED: "55S-221" };
+const L200_DOUBLE_SLIM = { CLEAR: "55L-201", SATIN: "55L-211", BLACK_SATIN_SEALED: "55L-221" };
+
+const FRAME_KIT_MAP = {
+    slim_single: { S: "54S-6214", K: "54S-621K", W: "54S-621W" },
+    slim_double: { S: "54L-6714", K: "54L-671K", W: "54L-671W" }
+};
+
+const MIXED_INSERT_RANCH = {
+    stockton_colonial: "stockton_ranch",
+    waterton_colonial: "waterton_ranch",
+    cascade_colonial: "cascade_ranch",
+    prairie: "prairie"
+};
+
+function getWindow1({ doorModel, shape, glassType, isMixed, isCustomSlim, hasSlimSingle }) {
+
+    if (isCustomSlim && hasSlimSingle) {
+        return doorModel === "A"
+            ? (L138_SINGLE_SLIM[glassType] || "None")
+            : (L200_SINGLE_SLIM[glassType] || "None");
+    }
+
+    if (isMixed) {
+        const code = GLASS_TYPE_COLONIAL[glassType];
+        return code ? `552-${code}` : "None";
+    }
+
+    if (!shape || !glassType) {
+        return "None";
+    }
+
+    let code = "";
+
+    if (shape === "colonial") {
+        code = GLASS_TYPE_COLONIAL[glassType];
+    } else if (shape === "ranch") {
+        code = GLASS_TYPE_RANCH[glassType];
+    } else if (shape === "slim_single") {
+        code = doorModel === "A" ? L138_SINGLE_SLIM[glassType] : L200_SINGLE_SLIM[glassType];
+    } else if (shape === "slim_double") {
+        code = doorModel === "A" ? L138_DOUBLE_SLIM[glassType] : L200_DOUBLE_SLIM[glassType];
+    }
+
+    if (!code) {
+        return "None";
+    }
+
+    return shape.includes("slim") ? code : `552-${code}`;
+}
+
+function getWindow2({ doorModel, shape, glassType, temperedGlass, isMixed, isCustomSlim, hasSlimDouble }) {
+
+    if (isCustomSlim && hasSlimDouble) {
+        return doorModel === "A"
+            ? (L138_DOUBLE_SLIM[glassType] || "None")
+            : (L200_DOUBLE_SLIM[glassType] || "None");
+    }
+
+    if (isMixed) {
+        const code = GLASS_TYPE_RANCH[glassType];
+        return code ? `552-${code}` : "None";
+    }
+
+    // Original returns "0" (not "None") here
+    if (!shape || !glassType || !temperedGlass) {
+        return "0";
+    }
+
+    let code = "";
+
+    if (shape === "colonial") {
+        code = GLASS_TYPE_COLONIAL_TEMP[glassType];
+    } else if (shape === "ranch") {
+        code = GLASS_TYPE_RANCH_TEMP[glassType];
+    }
+
+    return code ? `552-${code}` : "0";
+}
+
+function getInsert1({ glassInsert, insertColor }) {
+
+    const code = INSERT_CODES[glassInsert];
+
+    if (!glassInsert || !code) {
+        return "";
+    }
+
+    return `${code}${insertColor}`;
+}
+
+function getInsert2({ glassInsert, insertColor, isMixed }) {
+
+    if (!isMixed || !glassInsert) {
+        return "";
+    }
+
+    const ranchCode = INSERT_CODES[MIXED_INSERT_RANCH[glassInsert]];
+
+    return ranchCode ? `${ranchCode}${insertColor}` : "";
+}
+
+function getExteriorFrame1({ doorModel, shape, glassType, frameColor, isMixed }) {
+
+    let value = "None";
+
+    if (isMixed) {
+        if (!glassType) {
+            return "None";
+        }
+        value = `550-601${frameColor}`;
+    }
+
+    if (!shape && !isMixed) {
+        return "None";
+    }
+
+    if (shape === "colonial") value = `550-601${frameColor}`;
+    if (shape === "ranch") value = `550-651${frameColor}`;
+
+    if (doorModel === "D") {
+        if (shape === "slim_single") value = `550-620${frameColor}`;
+        if (shape === "slim_double") value = `550-670${frameColor}`;
+    }
+
+    return value;
+}
+
+function getExteriorFrame2({ glassType, frameColor, isMixed }) {
+
+    if (!isMixed || !glassType) {
+        return "None";
+    }
+
+    return `550-651${frameColor}`;
+}
+
+function getInteriorFrame1({ doorModel, shape, glassType, isMixed }) {
+
+    const isDouble = GLASS_TYPE_GLAZING[glassType] === "double";
+
+    if (isMixed) {
+        if (!glassType) {
+            return "None";
+        }
+        return isDouble ? "550-612X" : "550-613X";
+    }
+
+    if (!shape) {
+        return "None";
+    }
+
+    let value = "None";
+
+    if (shape === "colonial") {
+        value = doorModel === "A"
+            ? (isDouble ? "550-606X" : "550-612X")
+            : (doorModel === "D" ? (isDouble ? "550-612X" : "550-613X") : value);
+    }
+
+    if (shape === "ranch") {
+        value = doorModel === "A"
+            ? (isDouble ? "550-656X" : "550-662X")
+            : (doorModel === "D" ? (isDouble ? "550-662X" : "550-663X") : value);
+    }
+
+    if (doorModel === "D") {
+        if (shape === "slim_single") value = "550-622";
+        if (shape === "slim_double") value = "550-672";
+    }
+
+    return value;
+}
+
+function getInteriorFrame2({ glassType, isMixed }) {
+
+    if (!isMixed || !glassType) {
+        return "None";
+    }
+
+    return GLASS_TYPE_GLAZING[glassType] === "double" ? "550-662X" : "550-663X";
+}
+
+function getFrameKit({ doorModel, shape, frameColor }) {
+
+    if (doorModel !== "A") {
+        return "None";
+    }
+
+    return FRAME_KIT_MAP[shape]?.[frameColor] || "None";
+}
+
+function getScrews({ doorModel, shape, glassType, isMixed }) {
+
+    if (isMixed) {
+        return glassType ? "215-328" : "";
+    }
+
+    if (!shape) {
+        return "";
+    }
+
+    if (shape.includes("slim")) {
+        return doorModel === "D" ? "215-333" : "215-334";
+    }
+
+    if (doorModel === "A") return "215-321";
+    if (doorModel === "D") return "215-328";
+
+    return "";
+}
+
+/* Live part codes – written to EW on every change */
+export function getGlazingCodeValues({
+    doorModel,
+    panelStyle,
+    glassShape,
+    glassType,
+    glassInsert,
+    temperedGlass,
+    frameColor,
+    insertColor,
+    windowPosition,
+    doorInfoSections = []
+}) {
+
+    const shape = glassShape || "";
+
+    const ctx = {
+        doorModel,
+        shape,
+        glassType: glassType || "",
+        glassInsert: shape.includes("slim") ? "" : (glassInsert || ""),
+        temperedGlass: temperedGlass || "",
+        frameColor: frameColor || "",
+        insertColor: insertColor || "",
+        isMixed: panelStyle === "M",
+        isCustomSlim: windowPosition === "custom" && shape.includes("slim"),
+        hasSlimSingle: doorInfoSections.some(s => s.shape === "slim_single"),
+        hasSlimDouble: doorInfoSections.some(s => s.shape === "slim_double")
+    };
+
+    return {
+        WINDOW_1: getWindow1(ctx),
+        WINDOW_2: getWindow2(ctx),
+        INSERT_1: getInsert1(ctx),
+        INSERT_2: getInsert2(ctx),
+        EXTERIOR_FRAME_1: getExteriorFrame1(ctx),
+        EXTERIOR_FRAME_2: getExteriorFrame2(ctx),
+        INTERIOR_FRAME_1: getInteriorFrame1(ctx),
+        INTERIOR_FRAME_2: getInteriorFrame2(ctx),
+        FRAME_KIT: getFrameKit(ctx),
+        SCREWS: getScrews(ctx),
+        INSERT_YES_NO: ctx.glassInsert ? "Y" : "N",
+        SLIM_YES_NO_FOR_FRAMES:
+            ["slim_single", "slim_double"].includes(shape) && doorModel === "A"
+                ? "Y"
+                : "N"
+    };
+}
+
+
+/* ##########################################################
+   2) CONFIGURE CODES
+########################################################## */
 
 /* ----------------------------------------------------------
    CONSTANTS (same as original)
@@ -87,7 +414,6 @@ function getConfigId() {
 function parseAllRllValues(data) {
 
     const values = Array(15).fill(0);
-
     const results = data?.option?.[0]?.result || [];
 
     results.forEach(item => {
@@ -158,7 +484,9 @@ function countMixedPanelStyles(pattern) {
     const result = { C: 0, R: 0 };
 
     String(pattern || "").split("").forEach(char => {
+
         const style = char.toUpperCase();
+
         if (style === "C" || style === "R") {
             result[style]++;
         }
@@ -167,9 +495,9 @@ function countMixedPanelStyles(pattern) {
     return result;
 }
 
-/* ==========================================================
-   MAIN
-========================================================== */
+/* ----------------------------------------------------------
+   MAIN (Configure)
+---------------------------------------------------------- */
 
 export async function getGlazingCodeLogicValues(input, values) {
 
@@ -188,7 +516,9 @@ export async function getGlazingCodeLogicValues(input, values) {
         numOfPanels,
         numOfWindows,
         doorInfoSections = [],
-        endCaps = "N"
+        endCaps = "N",
+        drill = "Y",
+        windowCutouts = "N"
     } = input;
 
     const shape = glassShape || "";
@@ -215,9 +545,9 @@ export async function getGlazingCodeLogicValues(input, values) {
     const centerHingeCode = driven.CENTER_HINGE_CODE;
     const isRaynor = driven.RAYNOR_DOOR;
 
-    // User inputs that are still EW-only (Advanced tab)
-    const drill = readEwValue("DRILL") ?? "Y";
-    const isCutOut = readEwValue("WINDOW_CUTOUTS_YESNO") ?? "N";
+    // Advanced tab values (passed from React – not EW inputs on Landmark)
+    const drillValue = drill || "Y";
+    const isCutOut = windowCutouts || "N";
 
     // Original: fields keep their current value when the logic
     // does not set a new one (rw node value was left untouched)
@@ -330,7 +660,7 @@ export async function getGlazingCodeLogicValues(input, values) {
     const panelCode = isMixed ? designCode : panelSpacing;
 
     const smartcomCode =
-        prefix + panelCode + centerHingeCode + "S" + drill + "-" + widthFt + widthIn;
+        prefix + panelCode + centerHingeCode + "S" + drillValue + "-" + widthFt + widthIn;
 
     for (let i = 1; i <= 9; i++) {
 
@@ -585,7 +915,7 @@ export async function getGlazingCodeLogicValues(input, values) {
                 enabledArr[index] ? Number(rll[index]) || 0 : 0
             );
 
-            const numOfWindows = enabledArr.filter(v => v === true).length;
+            const windowCount = enabledArr.filter(v => v === true).length;
 
             const locationY = LOC_Y_MAP[sectionHeight] || 0;
 
@@ -608,7 +938,7 @@ export async function getGlazingCodeLogicValues(input, values) {
             let cnc = `${scPartNo},${doorThickness},${punchCode},${rpWidth},${sectionHeight},LR`;
 
             cnc += "," + Array(14).fill(0).join(",");
-            cnc += `,${numOfWindows}`;
+            cnc += `,${windowCount}`;
 
             const slimOffset = (slimShape) => {
                 if (slimShape === "slim_single") {
@@ -631,9 +961,7 @@ export async function getGlazingCodeLogicValues(input, values) {
                     const locX = locXValues[liteIndex++];
                     const s = shapeForIndex(index);
 
-                    cnc += `,${WC[index]},${CNC_WIDTH_MAP[s] || 0},${CNC_HEIGHT_MAP[s] || 0},${
-                        useDecimals ? Number(locX).toFixed(2) : locX
-                    },${locationY}`;
+                    cnc += `,${WC[index]},${CNC_WIDTH_MAP[s] || 0},${CNC_HEIGHT_MAP[s] || 0},${useDecimals ? Number(locX).toFixed(2) : locX},${locationY}`;
                 }
             };
 

@@ -3,12 +3,10 @@
    Port of addSchedulingCodeLogic() from SCHEDULING_CODE.js
 
    Needs SECTION_0x_SMARTCOM_CODE from the glazing code
-   driver, so it runs AFTER glazingCodeLogic.
+   driver, so it runs AFTER glazing (ew/glazing.js).
 
    Output: SECTION_01_SC_CODE ... SECTION_09_SC_CODE
 ========================================================== */
-
-import { readEwValue } from "./ewSync";
 
 export function getSchedulingValues(input, values) {
 
@@ -16,7 +14,8 @@ export function getSchedulingValues(input, values) {
         panelStyle: face,
         selectedColor,
         doorInfoSections = [],
-        endCaps = "N"
+        endCaps = "N",
+        drill = "Y"
     } = input;
 
     // Original getSectionInfo(): BOTTOM -> TOP
@@ -26,8 +25,8 @@ export function getSchedulingValues(input, values) {
     const lmDoorModel = values.LM_DOOR_MODEL ?? "";
     const panelSpacing = values.PANEL_SPACING ?? "";
 
-    // User input that is still EW-only (Advanced tab)
-    const drill = readEwValue("DRILL") ?? "Y";
+    // Advanced tab value (passed from React – not an EW input on Landmark)
+    const drillValue = drill || "Y";
 
     const endCapsFlag = endCaps === "Y" ? 1 : 0;
 
@@ -62,7 +61,7 @@ export function getSchedulingValues(input, values) {
             lmDoorModel,
             face,
             selectedColor,
-            drill,
+            drillValue,
             `${face}${panelSpacing}`,
             glazed,
             btmRetainer,

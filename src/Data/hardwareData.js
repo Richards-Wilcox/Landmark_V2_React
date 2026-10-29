@@ -129,23 +129,35 @@ const IC_CODE_MAP = {
     HL_TOR: { icCode: "I", hwdesc: "I", trackCode: "I" }
 };
 
+// Old SPRING_TYPE radio values could be TORSION / EXTENSION
+const normalizeSpringType = (springType) => {
+    const value = String(springType || "").toUpperCase();
+    if (value === "TORSION") return "TOR";
+    if (value === "EXTENSION") return "EXT";
+    return value;
+};
+
 // Everything the old LIFT_TYPE radio carried as attributes
 export function getLiftConfig(liftType, springType) {
 
     const lift = LIFT_TYPES.find(item => item.value === liftType);
-    const codes = IC_CODE_MAP[`${liftType}_${springType}`] || {};
+    const spring = normalizeSpringType(springType);
+    const codes = IC_CODE_MAP[`${liftType}_${spring}`] || {};
 
     return {
         value: liftType || "",
         label: lift?.label || "",
-        radius: lift?.radius ?? "",
+
+        // Strings, same as getAttribute() in the old code
+        // (radius 0 must stay "0", not become "")
+        radius: lift ? String(lift.radius) : "",
         numval: lift?.numval || "",
+
         icCode: codes.icCode || "",
         hwdesc: codes.hwdesc || "",
         trackCode: codes.trackCode || ""
     };
 }
-
 /* ---------- Disabled options + reasons (old tooltips) ---------- */
 
 export const getHardwareLabel = (hardwareSet) =>

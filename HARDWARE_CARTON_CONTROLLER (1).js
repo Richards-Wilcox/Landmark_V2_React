@@ -14,14 +14,55 @@
    Both paths use the SAME calculation functions below
    (section "SHARED CALCULATIONS"), so a rule is changed in
    one place only.
+
+   Names are prefixed with "Carton" so they cannot clash with
+   TRACK_BUNDLE_CONTROLLER.js in the shared EW scope.
+
+   DEBUG
+   - CARTON_DEBUG = true -> console table after every run:
+       id | calculated | node value | input value | status
+   - Second check 1 s later shows if something overwrote a value
+   - Console: window.verifyHardwareCarton() -> check again any time
 ========================================================== */
 
-const LANDMARK_PRODUCT_ID = "162059085";
+const CARTON_LANDMARK_PRODUCT_ID = "162059085";
+
+// Set to false to switch off the verification logs
+const CARTON_DEBUG = true;
 
 // Landmark: CENTER_HINGE_CODE (letter) -> CENTER_HINGE_QTY (number)
 const CENTER_HINGE_CODE_MAP = {
     A: 1, B: 2, C: 3, D: 4, E: 5, F: 6, G: 7, H: 8, I: 9
 };
+
+// Every EW input this file writes (Landmark path)
+const CARTON_OUTPUT_IDS = [
+    "END_HINGE_OUTPUT",
+    "END_HINGE_QTY",
+    "CENTER_HINGE_OUTPUT",
+    "CENTER_HINGE_QTY",
+    "HARDWARE_SET_CODE",
+    "DRUMS_CABLES_KIT",
+    "QTY_215306",
+    "DOUBLE_END_HINGES_OUTPUT",
+    "CONVERSION_KIT",
+    "CABLE",
+    "SLICE_KIT",
+    "HARDWARE_DESC",
+    "HINGE_PACK_1",
+    "HINGE_PACK_1_QTY",
+    "HINGE_PACK_2",
+    "HINGE_PACK_2_QTY",
+    "QTY_950188",
+    "QTY_950189",
+    "QTY_950192",
+    "QTY_40021",
+    "QTY_950190",
+    "QTY_950191",
+    "QTY_950195",
+    "QTY_950176",
+    "QTY_950177"
+];
 
 
 /* ==========================================================
@@ -48,7 +89,7 @@ function normalizeCenterHingeCode(code) {
    Other products: 6 (≤ 9 ft) / 12. */
 function calcCenterHingeQty(productId, centerHingeCode, doorWidthFeet) {
 
-    if (String(productId) == LANDMARK_PRODUCT_ID) {
+    if (String(productId) == CARTON_LANDMARK_PRODUCT_ID) {
 
         const code = normalizeCenterHingeCode(centerHingeCode);
 
@@ -71,28 +112,9 @@ function calcHardwareSetCode(
     totalCenterHingeQty
 ) {
 
-    const normalizedDoorHeightFeet =
-        Number(doorHeightFeet) || 0;
-
-    const normalizedNumSections =
-        Number(numSections) || 0;
-
-    const normalizedCenterHingeQty =
-        Number(totalCenterHingeQty) || 0;
-
-    console.group("calcHardwareSetCode");
-
-    console.log("1. Inputs", {
-        doorHeightFeet,
-        numSections,
-        totalCenterHingeQty
-    });
-
-    console.log("2. Normalized inputs", {
-        normalizedDoorHeightFeet,
-        normalizedNumSections,
-        normalizedCenterHingeQty
-    });
+    const normalizedDoorHeightFeet = Number(doorHeightFeet) || 0;
+    const normalizedNumSections = Number(numSections) || 0;
+    const normalizedCenterHingeQty = Number(totalCenterHingeQty) || 0;
 
     /* ---------- Height code ---------- */
 
@@ -110,11 +132,6 @@ function calcHardwareSetCode(
         heightCode = "120";
     }
 
-    console.log("3. Height code", {
-        normalizedDoorHeightFeet,
-        heightCode
-    });
-
     /* ---------- Section code ---------- */
 
     let sectionCode = normalizedNumSections;
@@ -123,42 +140,13 @@ function calcHardwareSetCode(
         sectionCode = "4";
     }
 
-    console.log("4. Section code", {
-        normalizedNumSections,
-        sectionCode
-    });
+    /* ---------- Center hinge carton character ----------
+       0 -> 0, 1 -> B, 2 -> C, 3 -> D, 4 or greater -> D */
 
-    /* ---------- Center hinge carton character ---------- */
-
-    /*
-     * Intended rule:
-     * 0 -> 0
-     * 1 -> B
-     * 2 -> C
-     * 3 -> D
-     * 4 or greater -> D
-     */
-    const centerHingeLookup =
-        "0BCDDDDDDDDDDDDDDDDDDDD";
+    const centerHingeLookup = "0BCDDDDDDDDDDDDDDDDDDDD";
 
     const numCenterHinges =
-        centerHingeLookup.charAt(
-            normalizedCenterHingeQty
-        ) || "D";
-
-    console.log("5. Center hinge conversion", {
-        CENTER_HINGE_QTY:
-            normalizedCenterHingeQty,
-
-        lookupIndex:
-            normalizedCenterHingeQty,
-
-        lookupCharacter:
-            numCenterHinges,
-
-        lookupString:
-            centerHingeLookup
-    });
+        centerHingeLookup.charAt(normalizedCenterHingeQty) || "D";
 
     /* ---------- Fixed values ---------- */
 
@@ -178,21 +166,15 @@ function calcHardwareSetCode(
         `${hardwareType}` +
         `SBN`;
 
-    console.log("6. Final parts", {
-        partNum,
-        springType,
-        heightCode,
-        sectionCode,
-        numCenterHinges,
-        hardwareType
-    });
-
-    console.log(
-        "7. HARDWARE_SET_CODE",
-        hardwareSetCode
-    );
-
-    console.groupEnd();
+    if (CARTON_DEBUG) {
+        console.groupCollapsed(`[HardwareCarton] HARDWARE_SET_CODE = ${hardwareSetCode}`);
+        console.table({
+            doorHeightFeet: { input: doorHeightFeet, normalized: normalizedDoorHeightFeet, code: heightCode },
+            numSections: { input: numSections, normalized: normalizedNumSections, code: sectionCode },
+            centerHingeQty: { input: totalCenterHingeQty, normalized: normalizedCenterHingeQty, code: numCenterHinges }
+        });
+        console.groupEnd();
+    }
 
     return hardwareSetCode;
 }
@@ -221,7 +203,7 @@ function calcDoubleEndHinges(productId, endCaps, numSections) {
 
     let isDBLEnabled = false;
 
-    if (String(productId) === LANDMARK_PRODUCT_ID) {
+    if (String(productId) === CARTON_LANDMARK_PRODUCT_ID) {
         isDBLEnabled = endCaps === "Y";
     } else {
         isDBLEnabled = endCaps === "double";
@@ -290,8 +272,8 @@ function calcCable(productId, liftType, doorHeight, glassShape) {
                 value = "13-021-323201";
     }
 
-    //assign value to none for LM v2 when glass shape is selected. (we are removing heavy Top)
-    if (String(productId) === LANDMARK_PRODUCT_ID) {
+    // LM v2: no cable when a glass shape is selected (heavy top removed)
+    if (String(productId) === CARTON_LANDMARK_PRODUCT_ID) {
         if (glassShape && glassShape !== "NONE") {
             value = "NONE";
         }
@@ -324,7 +306,7 @@ function calcHardwareDesc({
     const hwType = "+";
     const endStiles = ["double", "Y"].includes(endCaps) ? "DE" : "";
 
-    const doorModel = String(productId) == LANDMARK_PRODUCT_ID
+    const doorModel = String(productId) == CARTON_LANDMARK_PRODUCT_ID
         ? (doorModelDesc || "")
         : "Stilo";
 
@@ -428,16 +410,69 @@ function resiCartonCodeMap(doorWidth) {
 
 
 /* ==========================================================
+   EW ACCESS (shared by both paths)
+========================================================== */
+
+function getEwCartonElement(id) {
+    return document.getElementById(id) ||
+        (document.ui && document.ui[id]) ||
+        null;
+}
+
+/* EW node store – bare "nodeset" (let/const) or window.nodeset */
+function getCartonNodeset() {
+    if (typeof nodeset !== "undefined" && nodeset) {
+        return nodeset;
+    }
+    return window.nodeset || null;
+}
+
+/* Landmark React page: values come from runHardwareCarton() only.
+   #react-root covers the case where GL_PRODUCT_ID is not loaded
+   yet when addHardwareDrivers() runs. */
+function isCartonLandmarkReactPage() {
+
+    let productId = "";
+
+    try {
+        if (typeof getState === "function") {
+            productId = getState("GL_PRODUCT_ID") || "";
+        }
+    } catch (err) {
+        productId = "";
+    }
+
+    if (!productId) {
+        productId = getEwCartonElement("GL_PRODUCT_ID")?.value || "";
+    }
+
+    return (
+        String(productId) === CARTON_LANDMARK_PRODUCT_ID ||
+        !!document.getElementById("react-root")
+    );
+}
+
+
+/* ==========================================================
    1) OTHER PRODUCTS – react-wilcox (unchanged behaviour)
 ========================================================== */
 
 //TODO: Rename to Residential Hardware Carton
 function addHardwareDrivers() {
 
-    // Landmark React has no react-wilcox – it uses runHardwareCarton()
+    // No react-wilcox, or Landmark React -> runHardwareCarton() handles it.
+    // Registering here would overwrite the values written by React.
     if (typeof addLogic !== "function") {
+        if (CARTON_DEBUG) console.log("[HardwareCarton] addHardwareDrivers skipped: addLogic not available");
         return;
     }
+
+    if (isCartonLandmarkReactPage()) {
+        if (CARTON_DEBUG) console.log("[HardwareCarton] addHardwareDrivers skipped: Landmark React page (runHardwareCarton is used)");
+        return;
+    }
+
+    if (CARTON_DEBUG) console.log("[HardwareCarton] addHardwareDrivers: registering addLogic rules");
 
     addLogic("END_HINGE_OUTPUT", function () {
         this.value = "327-040";
@@ -511,10 +546,10 @@ function addHardwareDrivers() {
             doorWidthInches: getState("DOOR_WIDTH_INCHES"),
             doorHeightFeet: getState("DOOR_HEIGHT_FEET"),
             doorHeightInches: getState("DOOR_HEIGHT_INCHES"),
-            liftHwdesc: getSelected("LIFT_TYPE").getAttribute("hwdesc"),
+            liftHwdesc: getSelected("LIFT_TYPE")?.getAttribute("hwdesc") || "",
             endCaps: getState("END_CAPS"),
-            doorModelDesc: productId == LANDMARK_PRODUCT_ID
-                ? getNode("DOOR_MODEL").getAttribute("desc")
+            doorModelDesc: productId == CARTON_LANDMARK_PRODUCT_ID
+                ? (getNode("DOOR_MODEL")?.getAttribute("desc") || "")
                 : ""
         });
 
@@ -614,48 +649,22 @@ function updateHingePacks() {
    }
 ========================================================== */
 
-function getEwCartonElement(id) {
-    return document.getElementById(id) ||
-        (document.ui && document.ui[id]) ||
-        null;
-}
-
+/* Write the value to the node AND the input, no change event
+   (events let legacy rules overwrite the calculated output). */
 function setEwCartonValue(id, value) {
 
     const element = getEwCartonElement(id);
+    const store = getCartonNodeset();
+    const finalValue = value === null || value === undefined ? "" : value;
 
     let found = false;
 
-    const finalValue =
-        value === null || value === undefined
-            ? ""
-            : value;
-
-    /*
-     * Set nodeset first.
-     *
-     * Do not trigger logic while nodeset still contains
-     * the previous value.
-     */
-    if (
-        window.nodeset &&
-        window.nodeset[id]
-    ) {
-        window.nodeset[id].value = finalValue;
+    if (store && store[id]) {
+        store[id].value = finalValue;
         found = true;
     }
 
-    /*
-     * Set the actual EW input.
-     *
-     * Do not dispatch input/change here. These values are
-     * final calculated carton outputs. Dispatching change
-     * allows another legacy rule to overwrite the value.
-     */
-    if (
-        element &&
-        "value" in element
-    ) {
+    if (element && "value" in element) {
         element.value = String(finalValue);
         found = true;
     }
@@ -663,12 +672,11 @@ function setEwCartonValue(id, value) {
     return found;
 }
 
-
 function getHardwareCartonValues(input = {}) {
 
     const n = v => Number(v) || 0;
 
-    const productId = String(input.productId ?? LANDMARK_PRODUCT_ID);
+    const productId = String(input.productId ?? CARTON_LANDMARK_PRODUCT_ID);
 
     const doorWidthFeet = input.doorWidthFeet ?? 0;
     const doorWidthInches = input.doorWidthInches ?? 0;
@@ -676,7 +684,6 @@ function getHardwareCartonValues(input = {}) {
     const doorHeightInches = input.doorHeightInches ?? 0;
 
     // Total inches – from React (input) or the global functions
-    const width = n(input.width ?? (typeof getGlobalDoorWidth === "function" ? getGlobalDoorWidth() : 0));
     const height = n(input.height ?? (typeof getGlobalDoorHeight === "function" ? getGlobalDoorHeight() : 0));
 
     const numSections = n(input.numSections) || 4;
@@ -688,53 +695,26 @@ function getHardwareCartonValues(input = {}) {
             ? n(getEwCartonElement("WEIGHT")?.value)
             : n(input.weight);
 
-    // Letter (A–I) -> number (1–9)
-    const centerHingeCode =
-        normalizeCenterHingeCode(
-            input.centerHingeCode
-        );
+    // Letter (A–I) -> number (1–9); other products 6 / 12
+    const centerHingeCode = normalizeCenterHingeCode(input.centerHingeCode);
 
-    const centerHingeQty =
-        String(productId) === LANDMARK_PRODUCT_ID
-            ? Number(
-                CENTER_HINGE_CODE_MAP[
-                centerHingeCode
-                ] || 0
-            )
-            : (
-                Number(doorWidthFeet) <= 9
-                    ? 6
-                    : 12
-            );
-
-    console.log(
-        "Hardware carton center hinge:",
-        {
-            productId,
-            centerHingeCode,
-            centerHingeQty,
-            centerHingeQtyType:
-                typeof centerHingeQty
-        }
+    const centerHingeQty = calcCenterHingeQty(
+        productId,
+        centerHingeCode,
+        doorWidthFeet
     );
 
-    const hingePacks =
-        calcHingePacks(
-            numSections,
-            centerHingeQty
-        );
-
     if (!centerHingeQty) {
-        console.warn(`Hardware carton: no CENTER_HINGE_QTY for center hinge code "${centerHingeCode}".`);
+        console.warn(`[HardwareCarton] no CENTER_HINGE_QTY for center hinge code "${centerHingeCode}".`);
     }
+
+    const hingePacks = calcHingePacks(numSections, centerHingeQty);
 
     return {
         END_HINGE_OUTPUT: "327-040",
-        // END_HINGE_OUTPUT: "",
         END_HINGE_QTY: calcEndHingeQty(endCaps),
 
         CENTER_HINGE_OUTPUT: "327-041",
-        // CENTER_HINGE_OUTPUT: "",
         CENTER_HINGE_QTY: centerHingeQty,          // NUMBER: D -> 4
 
         HARDWARE_SET_CODE: calcHardwareSetCode(doorHeightFeet, numSections, centerHingeQty),
@@ -762,98 +742,130 @@ function getHardwareCartonValues(input = {}) {
         HINGE_PACK_2: hingePacks.hingePack2,
         HINGE_PACK_2_QTY: hingePacks.hingePack2Qty,
 
-        ...calcWeightQuantities(endCaps, weight, height),
-
-
+        ...calcWeightQuantities(endCaps, weight, height)
     };
 }
 
-function runHardwareCarton(input) {
 
-    const values =
-        getHardwareCartonValues(input);
+/* ==========================================================
+   DEBUG – verification table
+========================================================== */
+
+// Last calculated values (used by window.verifyHardwareCarton)
+let cartonLastValues = null;
+
+/* One row per output id:
+   calculated | node (nodeset) | input (DOM) | status */
+function verifyCartonValues(expected, label) {
+
+    if (!CARTON_DEBUG || !expected) {
+        return [];
+    }
+
+    const store = getCartonNodeset();
+    const rows = {};
+    const problems = [];
+
+    CARTON_OUTPUT_IDS.forEach(id => {
+
+        const calculated = expected[id] ?? "";
+        const node = store && store[id] ? store[id].value : undefined;
+        const element = getEwCartonElement(id);
+        const input = element && "value" in element ? element.value : undefined;
+
+        let status = "OK";
+
+        if (node === undefined && input === undefined) {
+            status = "MISSING (no node, no input)";
+        } else if (input !== undefined && String(input) !== String(calculated)) {
+            status = "INPUT CHANGED";
+        } else if (node !== undefined && String(node) !== String(calculated)) {
+            status = "NODE CHANGED";
+        }
+
+        if (status !== "OK") {
+            problems.push(id);
+        }
+
+        rows[id] = {
+            calculated: String(calculated),
+            node: node === undefined ? "(no node)" : String(node),
+            input: input === undefined ? "(no input)" : String(input),
+            status
+        };
+    });
+
+    console.groupCollapsed(
+        `[HardwareCarton] ${label} – ${problems.length ? problems.length + " problem(s)" : "all OK"}`
+    );
+    console.table(rows);
+    if (problems.length) {
+        console.warn("[HardwareCarton] Problem ids:", problems);
+    }
+    console.groupEnd();
+
+    return problems;
+}
+
+/* Console: window.verifyHardwareCarton() – check again any time */
+function verifyHardwareCarton() {
+
+    if (!cartonLastValues) {
+        console.warn("[HardwareCarton] runHardwareCarton() has not run yet.");
+        return [];
+    }
+
+    return verifyCartonValues(cartonLastValues, "manual check");
+}
+
+
+/* ==========================================================
+   LANDMARK – run
+========================================================== */
+
+function runHardwareCarton(input = {}) {
+
+    if (CARTON_DEBUG) {
+        console.groupCollapsed("[HardwareCarton] runHardwareCarton input");
+        console.table(input);
+        console.groupEnd();
+    }
+
+    const values = getHardwareCartonValues(input);
 
     const missing = [];
 
-    /*
-     * Write all calculated carton values directly.
-     */
-    Object.entries(values).forEach(
-        ([id, value]) => {
-
-            const found =
-                setEwCartonValue(
-                    id,
-                    value
-                );
-
-            if (!found) {
-                missing.push(id);
-            }
+    Object.entries(values).forEach(([id, value]) => {
+        if (!setEwCartonValue(id, value)) {
+            missing.push(id);
         }
-    );
-
-    /*
-     * Final enforcement.
-     *
-     * CENTER_HINGE_CODE must remain the letter.
-     * CENTER_HINGE_QTY must remain the number.
-     */
-    const finalCenterHingeQty =
-        Number(values.CENTER_HINGE_QTY) || 0;
-
-    setEwCartonValue(
-        "CENTER_HINGE_QTY",
-        finalCenterHingeQty
-    );
-
-    /*
-     * Verify what is really stored after assignment.
-     */
-    const qtyElement =
-        getEwCartonElement(
-            "CENTER_HINGE_QTY"
-        );
-
-    const codeElement =
-        getEwCartonElement(
-            "CENTER_HINGE_CODE"
-        );
-
-    console.log(
-        "Hardware carton final center hinge:",
-        {
-            CENTER_HINGE_CODE_input:
-                codeElement?.value,
-
-            CENTER_HINGE_QTY_calculated:
-                finalCenterHingeQty,
-
-            CENTER_HINGE_QTY_input:
-                qtyElement?.value,
-
-            CENTER_HINGE_QTY_nodeset:
-                window.nodeset?.CENTER_HINGE_QTY
-                    ?.value
-        }
-    );
+    });
 
     if (missing.length) {
-        console.warn(
-            "Hardware carton: EW inputs not found:",
-            missing
-        );
+        console.warn("[HardwareCarton] EW inputs not found:", missing);
     }
 
-    console.log(
-        "Hardware carton values:",
-        values
-    );
+    cartonLastValues = { ...values };
 
-    return {
-        values,
-        missing
-    };
+    if (CARTON_DEBUG) {
+        console.log("[HardwareCarton] center hinge:", {
+            CENTER_HINGE_CODE_input: input.centerHingeCode,
+            CENTER_HINGE_CODE_ew: getEwCartonElement("CENTER_HINGE_CODE")?.value,
+            CENTER_HINGE_QTY: values.CENTER_HINGE_QTY
+        });
+    }
+
+    // Right after writing
+    verifyCartonValues(values, "after write");
+
+    // 1 s later – shows if another rule overwrote a value
+    if (CARTON_DEBUG) {
+        setTimeout(() => {
+            verifyCartonValues(values, "1 s later (overwritten?)");
+        }, 1000);
+    }
+
+    return { values, missing };
 }
 
 /* Assembled / Raw panel or no hardware set */
@@ -885,23 +897,32 @@ function clearHardwareCarton() {
         QTY_950177: 0
     };
 
-    Object.keys(values).forEach(id => setEwCartonValue(id, values[id]));
+    const missing = [];
 
-    return { values, missing: [] };
+    Object.keys(values).forEach(id => {
+        if (!setEwCartonValue(id, values[id])) {
+            missing.push(id);
+        }
+    });
+
+    // END / CENTER hinge outputs are fixed part numbers – keep them
+    cartonLastValues = {
+        ...values,
+        END_HINGE_OUTPUT: getEwCartonElement("END_HINGE_OUTPUT")?.value ?? "",
+        CENTER_HINGE_OUTPUT: getEwCartonElement("CENTER_HINGE_OUTPUT")?.value ?? ""
+    };
+
+    verifyCartonValues(cartonLastValues, "cleared");
+
+    return { values, missing };
 }
-
-console.log(
-    "React hardware carton input:",
-    {
-        CENTER_HINGE_CODE:
-            drivenValues.CENTER_HINGE_CODE,
-
-        type:
-            typeof drivenValues.CENTER_HINGE_CODE
-    }
-);
 
 /* React calls these through window */
 window.runHardwareCarton = runHardwareCarton;
 window.clearHardwareCarton = clearHardwareCarton;
 window.getHardwareCartonValues = getHardwareCartonValues;
+window.verifyHardwareCarton = verifyHardwareCarton;
+
+if (CARTON_DEBUG) {
+    console.log("[HardwareCarton] HARDWARE_CARTON_CONTROLLER.js loaded");
+}

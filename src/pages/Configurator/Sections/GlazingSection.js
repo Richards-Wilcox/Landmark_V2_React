@@ -82,6 +82,7 @@ function GlazingSection({
             />
 
             <FrameColor
+                doorModel={doorModel}
                 glassShape={glassShape}
                 panelStyle={panelStyle}
                 frameColor={frameColor}

@@ -12,14 +12,6 @@ function FinishSelector({
         ["F", "V", "T"].includes(panelStyle) &&
         !["X", "Y"].includes(selectedColor?.value);
 
-
-    console.log(
-        "panelStyle",
-        panelStyle,
-        "selectedColor",
-        selectedColor
-    );
-
     return (
 
         <div className="landmark-section">
